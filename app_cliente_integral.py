@@ -143,3 +143,176 @@ st.download_button(
 )
 
 st.caption("Versión demo — Proyecto Cliente Integral")
+
+
+# -----------------------------
+# 📊 Calcular promedios por cliente
+# -----------------------------
+df_dim_filtrado = df_dim[
+    (df_dim["area"].isin(areas_seleccionadas)) &
+    (df_dim["id_cliente"].isin(clientes_filtrados))
+]
+
+df_resultado = (
+    df_dim_filtrado.groupby("id_cliente")[["dimension_economica", "dimension_relacional", "dimension_cumplimiento", "dimension_potencial"]]
+    .mean()
+    .reset_index()
+)
+
+# 🆕 Calcular el promedio global de todas las dimensiones
+df_resultado["promedio_global"] = df_resultado[
+    ["dimension_economica", "dimension_relacional", "dimension_cumplimiento", "dimension_potencial"]
+].mean(axis=1)
+
+# 🆕 Crear segmentos básicos (por percentiles)
+p33 = df_resultado["promedio_global"].quantile(0.33)
+p66 = df_resultado["promedio_global"].quantile(0.66)
+
+def clasificar_cliente(valor):
+    if valor <= p33:
+        return "Malo"
+    elif valor <= p66:
+        return "Intermedio"
+    else:
+        return "Bueno"
+
+df_resultado["segmento"] = df_resultado["promedio_global"].apply(clasificar_cliente)
+
+# 🆕 Ordenar por desempeño
+df_resultado = df_resultado.sort_values("promedio_global", ascending=False).reset_index(drop=True)
+
+# Mostrar tabla
+st.markdown("---")
+st.subheader("📋 Segmentación básica de clientes")
+st.dataframe(df_resultado, use_container_width=True)
+
+# -----------------------------
+# 📊 Distribución de segmentos
+# -----------------------------
+st.markdown("---")
+st.subheader("📊 Distribución de segmentos")
+
+col1, col2 = st.columns(2)
+
+# 🆕 Gráfico de pastel
+fig_pie = px.pie(
+    df_resultado,
+    names="segmento",
+    title="Distribución de clientes por segmento",
+    color="segmento",
+    color_discrete_map={"Bueno": "#6CC24A", "Intermedio": "#FFD700", "Malo": "#E74C3C"}
+)
+col1.plotly_chart(fig_pie, use_container_width=True)
+
+# 🆕 Gráfico de barras: promedio global por segmento
+fig_bar_segmentos = (
+    df_resultado.groupby("segmento")["promedio_global"]
+    .mean()
+    .reset_index()
+    .sort_values("promedio_global", ascending=False)
+)
+fig_bar = px.bar(
+    fig_bar_segmentos,
+    x="segmento",
+    y="promedio_global",
+    text_auto=".2f",
+    color="segmento",
+    color_discrete_map={"Bueno": "#6CC24A", "Intermedio": "#FFD700", "Malo": "#E74C3C"}
+)
+fig_bar.update_layout(
+    template="plotly_white",
+    showlegend=False,
+    height=400,
+    yaxis=dict(range=[0, 1])
+)
+col2.plotly_chart(fig_bar, use_container_width=True)
+
+# ==========================================================
+# 🔍 SECCIÓN: Buscador de cliente (detalle individual)
+# ==========================================================
+
+st.markdown("---")
+st.subheader("🔎 Consulta detallada de cliente")
+
+# Lista de IDs disponibles
+lista_clientes = df_resultado["id_cliente"].tolist()
+
+# Buscador con selectbox
+cliente_seleccionado = st.selectbox("Selecciona un cliente:", lista_clientes)
+
+if cliente_seleccionado:
+
+    # -----------------------------
+    # 🧮 Datos del cliente seleccionado
+    # -----------------------------
+    cliente_data = df_resultado[df_resultado["id_cliente"] == cliente_seleccionado].iloc[0]
+
+    st.markdown(f"### 🧍 Cliente seleccionado: `{cliente_seleccionado}`")
+    st.markdown(
+        f"""
+        **Segmento:** {cliente_data['segmento']}  
+        **Promedio global:** {cliente_data['promedio_global']:.2f}
+        """
+    )
+
+    # -----------------------------
+    # 📊 Generar indicadores aleatorios por área
+    # -----------------------------
+    np.random.seed(hash(cliente_seleccionado) % (2**32 - 1))  # fijo por cliente
+
+    indicadores = {
+        "brilla": {
+            "indicador": "Número de compras",
+            "valor": np.random.randint(0, 11),
+            "unidad": "compras"
+        },
+        "consumo": {
+            "indicador": "Promedio de consumo mensual",
+            "valor": round(np.random.uniform(0, 200), 1),
+            "unidad": "m³"
+        },
+        "sad": {
+            "indicador": "Órdenes de servicio realizadas",
+            "valor": np.random.randint(0, 6),
+            "unidad": "órdenes"
+        }
+    }
+
+    # -----------------------------
+    # 📘 Mostrar indicadores reales
+    # -----------------------------
+    st.markdown("#### Indicadores por área")
+
+    cols = st.columns(3)
+    for i, area in enumerate(["brilla", "consumo", "sad"]):
+        with cols[i]:
+            data = indicadores[area]
+            st.metric(label=f"{area.upper()} — {data['indicador']}", value=f"{data['valor']} {data['unidad']}")
+
+    # -----------------------------
+    # 📊 Mostrar dimensiones normalizadas del cliente
+    # -----------------------------
+    st.markdown("#### Dimensiones normalizadas del cliente")
+    radar_df = cliente_data[
+        ["dimension_economica", "dimension_relacional", "dimension_cumplimiento", "dimension_potencial"]
+    ].to_frame().T
+
+    categorias = radar_df.columns.tolist()
+    valores = radar_df.iloc[0].tolist()
+
+    fig_radar_cliente = go.Figure()
+    fig_radar_cliente.add_trace(go.Scatterpolar(
+        r=valores + [valores[0]],
+        theta=categorias + [categorias[0]],
+        fill='toself',
+        name=f"Cliente {cliente_seleccionado}",
+        line_color="#006699"
+    ))
+    fig_radar_cliente.update_layout(
+        polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
+        showlegend=False,
+        template="plotly_white",
+        height=400,
+        margin=dict(l=20, r=20, t=20, b=20)
+    )
+    st.plotly_chart(fig_radar_cliente, use_container_width=True)
