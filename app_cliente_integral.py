@@ -261,33 +261,38 @@ if cliente_seleccionado:
     np.random.seed(hash(cliente_seleccionado) % (2**32 - 1))  # fijo por cliente
 
     indicadores = {
-        "brilla": {
-            "indicador": "Número de compras",
-            "valor": np.random.randint(0, 11),
-            "unidad": "compras"
-        },
-        "consumo": {
-            "indicador": "Promedio de consumo mensual",
-            "valor": round(np.random.uniform(0, 200), 1),
-            "unidad": "m³"
-        },
-        "sad": {
-            "indicador": "Órdenes de servicio realizadas",
-            "valor": np.random.randint(0, 6),
-            "unidad": "órdenes"
-        }
+        "brilla": [
+            {"indicador": "Número de compras", "valor": np.random.randint(0, 11), "unidad": "compras"},
+            {"indicador": "Monto promedio por compra", "valor": round(np.random.uniform(100000, 1000000), -3), "unidad": "COP"},
+            {"indicador": "Porcentaje de pagos a tiempo", "valor": round(np.random.uniform(60, 100), 1), "unidad": "%"}
+        ],
+        "consumo": [
+            {"indicador": "Promedio consumo mensual", "valor": round(np.random.uniform(0, 200), 1), "unidad": "m³"},
+            {"indicador": "Variabilidad de consumo", "valor": round(np.random.uniform(0, 40), 1), "unidad": "%"},
+            {"indicador": "Meses con consumo cero", "valor": np.random.randint(0, 4), "unidad": "meses"}
+        ],
+        "sad": [
+            {"indicador": "Órdenes de servicio realizadas", "valor": np.random.randint(0, 6), "unidad": "órdenes"},
+            {"indicador": "Tiempo promedio de atención", "valor": round(np.random.uniform(1, 7), 1), "unidad": "días"},
+            {"indicador": "Satisfacción promedio del cliente", "valor": round(np.random.uniform(70, 100), 1), "unidad": "%"}
+        ]
     }
 
     # -----------------------------
-    # 📘 Mostrar indicadores reales
+    # 🧾 Mostrar indicadores por área
     # -----------------------------
-    st.markdown("#### Indicadores por área")
+    st.markdown("#### Indicadores detallados por área")
 
-    cols = st.columns(3)
-    for i, area in enumerate(["brilla", "consumo", "sad"]):
-        with cols[i]:
-            data = indicadores[area]
-            st.metric(label=f"{area.upper()} — {data['indicador']}", value=f"{data['valor']} {data['unidad']}")
+    for area, lista_ind in indicadores.items():
+        st.markdown(f"##### 🟢 {area.upper()}")
+        cols = st.columns(3)
+        for i, ind in enumerate(lista_ind):
+            with cols[i]:
+                st.metric(
+                    label=f"{ind['indicador']}",
+                    value=f"{ind['valor']} {ind['unidad']}"
+                )
+        st.markdown("")  # espacio visual
 
     # -----------------------------
     # 📊 Mostrar dimensiones normalizadas del cliente
