@@ -1,0 +1,16 @@
+id_cliente,dimension_economica,dimension_relacional,dimension_cumplimiento,dimension_potencial,tipo_cliente
+COM_018,0.98,0.51,0.97,0.91,Comercial
+COM_003,0.71,0.68,0.84,0.9,Comercial
+COM_023,0.78,0.61,0.77,0.68,Comercial
+COM_026,0.82,0.75,0.65,0.65,Comercial
+COM_021,0.67,0.45,0.96,0.56,Comercial
+COM_008,0.78,0.98,0.92,0.43,Comercial
+COM_017,0.75,0.99,0.43,0.92,Comercial
+COM_046,0.94,0.82,0.42,0.89,Comercial
+COM_035,0.43,0.72,0.63,1.0,Comercial
+COM_031,0.57,0.59,0.89,1.0,Comercial
+COM_032,0.97,0.89,0.99,0.73,Comercial
+COM_033,0.93,0.81,0.49,0.86,Comercial
+COM_050,0.67,0.5,0.76,0.97,Comercial
+COM_040,0.77,0.95,0.63,0.91,Comercial
+COM_012,0.57,0.89,0.98,0.55,Comercial
