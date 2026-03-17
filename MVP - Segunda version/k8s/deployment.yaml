@@ -1,0 +1,127 @@
+# =============================================================================
+# deployment.yaml - Cliente Integral (Streamlit)
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cliente-integral
+  namespace: ${NAMESPACE}
+  labels:
+    app: cliente-integral
+    environment: ${ENVIRONMENT_NAME}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cliente-integral
+  template:
+    metadata:
+      labels:
+        app: cliente-integral
+        environment: ${ENVIRONMENT_NAME}
+    spec:
+      containers:
+        # ----------------------------------------------------------------------
+        # Container 1: Nginx SSL Proxy
+        # ----------------------------------------------------------------------
+        - name: nginx-ssl
+          image: nginx:1.25-alpine
+          ports:
+            - containerPort: 443
+              name: https
+            - containerPort: 80
+              name: http
+          volumeMounts:
+            - name: tls-certs
+              mountPath: "/etc/tls"
+              readOnly: true
+            - name: nginx-config
+              mountPath: "/etc/nginx/nginx.conf"
+              subPath: nginx.conf
+              readOnly: true
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "25m"
+            limits:
+              memory: "64Mi"
+              cpu: "100m"
+
+        # ----------------------------------------------------------------------
+        # Container 2: Streamlit Application
+        # ----------------------------------------------------------------------
+        - name: cliente-integral
+          image: ${IMAGE_NAME}
+          ports:
+            - containerPort: 3000
+              name: streamlit
+
+          # Health Checks
+          startupProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 12
+
+          readinessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          # Environment Variables
+          env:
+            # Databricks
+            - name: DATABRICKS_HOST
+              value: "${DATABRICKS_HOST}"
+            - name: DATABRICKS_HTTP_PATH
+              value: "${DATABRICKS_HTTP_PATH}"
+            - name: DATABRICKS_TOKEN
+              value: "${DATABRICKS_TOKEN}"
+
+            # Server
+            - name: PORT
+              value: "${PORT}"
+
+            # Streamlit Config
+            - name: STREAMLIT_SERVER_PORT
+              value: "${PORT}"
+            - name: STREAMLIT_SERVER_ADDRESS
+              value: "0.0.0.0"
+            - name: STREAMLIT_SERVER_HEADLESS
+              value: "true"
+            - name: STREAMLIT_BROWSER_GATHER_USAGE_STATS
+              value: "false"
+
+          # Resources
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "75m"
+            limits:
+              memory: "512Mi"
+              cpu: "300m"
+
+      # Volumes
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: cliente-integral-tls
+        - name: nginx-config
+          configMap:
+            name: nginx-ssl-config

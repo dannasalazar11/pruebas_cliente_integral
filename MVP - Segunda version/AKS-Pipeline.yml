@@ -1,0 +1,260 @@
+# =============================================================================
+# AKS-Pipeline.yml - Deploy a Azure Kubernetes Service
+# Cliente Integral (Streamlit)
+# =============================================================================
+
+name: CLIENTE_INTEGRAL_AKS
+
+trigger: none
+
+resources:
+  pipelines:
+    - pipeline: buildPipeline
+      source: 'CLIENTE_INTEGRAL_ACR'
+      trigger:
+        branches:
+          include:
+            - master
+            - qa
+
+variables:
+  # --------------------------------------------------------------------------
+  # Configuración para QA
+  # --------------------------------------------------------------------------
+  - ${{ if eq(variables['Build.SourceBranchName'], 'qa') }}:
+    - group: CLIENTE_INTEGRAL_QA
+    - name: aksCluster
+      value: AKS-CLUSTER-QT
+    - name: aksResourceGroup
+      value: RG-AKS-QT
+    - name: namespace
+      value: cliente-integral-qa
+    - name: environmentName
+      value: qa
+    - name: apiUrl
+      value: "cliente-integral-qa.efigas.com.co"
+    - name: acrName
+      value: cntregistry02
+
+  # --------------------------------------------------------------------------
+  # Configuración para Producción
+  # --------------------------------------------------------------------------
+  - ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
+    - group: CLIENTE_INTEGRAL_PROD
+    - name: aksCluster
+      value: CLUSTER-AKS
+    - name: aksResourceGroup
+      value: RG-AKS-CLUSTER
+    - name: namespace
+      value: cliente-integral-prod
+    - name: environmentName
+      value: prod
+    - name: apiUrl
+      value: "cliente-integral.efigas.com.co"
+    - name: acrName
+      value: cntregistry01
+
+pool:
+  vmImage: ubuntu-24.04
+
+steps:
+  # --------------------------------------------------------------------------
+  # 1. Descargar artifact del pipeline de build
+  # --------------------------------------------------------------------------
+  - download: buildPipeline
+    artifact: image-info-cliente-integral
+    displayName: 'Download build artifact'
+
+  # --------------------------------------------------------------------------
+  # 2. Extraer nombre de la imagen
+  # --------------------------------------------------------------------------
+  - script: |
+      export IMAGE_NAME=$(cat $(Pipeline.Workspace)/buildPipeline/image-info-cliente-integral/image.txt)
+      echo "📦 Image to deploy: $IMAGE_NAME"
+      echo "##vso[task.setvariable variable=fullImageName]$IMAGE_NAME"
+    displayName: 'Extract image name'
+
+  # --------------------------------------------------------------------------
+  # 3. Login a AKS
+  # --------------------------------------------------------------------------
+  - task: AzureCLI@2
+    displayName: 'Login a AKS'
+    inputs:
+      azureSubscription: 'AzureSimple SoftwareONE_EFIGAS (33af18a4-ada4-4259-940e-de4c11f5ca58)'
+      scriptType: bash
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        echo "🔐 Getting AKS credentials..."
+        az aks get-credentials \
+          --resource-group $(aksResourceGroup) \
+          --name $(aksCluster) \
+          --admin \
+          --overwrite-existing
+
+        echo "✅ Connected to cluster: $(aksCluster)"
+
+  # --------------------------------------------------------------------------
+  # 4. Crear namespace si no existe
+  # --------------------------------------------------------------------------
+  - script: |
+      echo "📁 Creating namespace: $(namespace)"
+      kubectl create namespace $(namespace) --dry-run=client -o yaml | kubectl apply -f -
+    displayName: 'Create namespace'
+
+  # --------------------------------------------------------------------------
+  # 5. Crear/Actualizar secret TLS
+  # --------------------------------------------------------------------------
+  - script: |
+      echo "🔒 Creating TLS secret..."
+      kubectl create secret tls cliente-integral-tls \
+        --cert=certs/$(environmentName)/servidor.crt \
+        --key=certs/$(environmentName)/servidor.key \
+        --namespace=$(namespace) \
+        --dry-run=client -o yaml | kubectl apply -f -
+
+      echo "✅ TLS secret created/updated"
+    displayName: 'Create TLS secret'
+
+  # --------------------------------------------------------------------------
+  # 6. Sustituir variables en manifests de Kubernetes
+  # --------------------------------------------------------------------------
+  - script: |
+      echo "📝 Processing Kubernetes manifests..."
+      mkdir -p manifests-out
+
+      # Exportar variables para envsubst
+      export IMAGE_NAME="$(fullImageName)"
+      export NAMESPACE="$(namespace)"
+      export ENVIRONMENT_NAME="$(environmentName)"
+      export API_DOMAIN="$(apiUrl)"
+      export DATABRICKS_HOST="$(DATABRICKS_HOST)"
+      export DATABRICKS_HTTP_PATH="$(DATABRICKS_HTTP_PATH)"
+      export DATABRICKS_TOKEN="$(DATABRICKS_TOKEN)"
+      export PORT="$(PORT)"
+
+      # Procesar cada archivo YAML
+      for file in k8s/*.yaml; do
+        echo "  Processing: $file"
+        envsubst '${IMAGE_NAME} ${NAMESPACE} ${ENVIRONMENT_NAME} ${API_DOMAIN} ${DATABRICKS_HOST} ${DATABRICKS_HTTP_PATH} ${DATABRICKS_TOKEN} ${PORT}' \
+          < "$file" > "manifests-out/$(basename $file)"
+      done
+
+      echo "✅ Manifests processed"
+      ls -la manifests-out/
+    displayName: 'Process K8s manifests'
+
+  # --------------------------------------------------------------------------
+  # 7. Aplicar manifests de Kubernetes
+  # --------------------------------------------------------------------------
+  - script: |
+      echo "🚀 Applying Kubernetes manifests..."
+
+      # Fase 1: Infraestructura (ConfigMaps, Services, HPA)
+      echo "  Phase 1: Infrastructure..."
+      kubectl apply -f manifests-out/nginx-config.yaml
+      kubectl apply -f manifests-out/service.yaml
+      kubectl apply -f manifests-out/hpa.yaml
+
+      # Esperar a que los recursos estén listos
+      sleep 2
+
+      # Fase 2: Deployment
+      echo "  Phase 2: Deployment..."
+      kubectl apply -f manifests-out/deployment.yaml
+
+      echo "✅ All manifests applied"
+    displayName: 'Apply K8s manifests'
+
+  # --------------------------------------------------------------------------
+  # 8. Verificar estado del deployment
+  # --------------------------------------------------------------------------
+  - script: |
+      echo "⏳ Waiting for deployment to be ready..."
+      kubectl rollout status deployment/cliente-integral \
+        -n $(namespace) \
+        --timeout=300s
+
+      echo ""
+      echo "📊 Deployment Status:"
+      kubectl get all -n $(namespace) -o wide
+
+      echo ""
+      echo "📋 Pod Details:"
+      kubectl get pods -n $(namespace) -o custom-columns="\
+        NAME:.metadata.name,\
+        STATUS:.status.phase,\
+        READY:.status.conditions[?(@.type=='Ready')].status,\
+        RESTARTS:.status.containerStatuses[0].restartCount,\
+        AGE:.metadata.creationTimestamp"
+    displayName: 'Verify deployment status'
+
+  # --------------------------------------------------------------------------
+  # 9. Diagnósticos detallados
+  # --------------------------------------------------------------------------
+  - script: |
+      echo "🔍 Running diagnostics..."
+
+      PODS=$(kubectl get pods -n $(namespace) -l app=cliente-integral -o jsonpath='{.items[*].metadata.name}')
+
+      for POD in $PODS; do
+        echo ""
+        echo "═══════════════════════════════════════════════════════════"
+        echo "📦 Pod: $POD"
+        echo "═══════════════════════════════════════════════════════════"
+
+        echo ""
+        echo "📝 Pod Description:"
+        kubectl describe pod $POD -n $(namespace) | head -50
+
+        echo ""
+        echo "📜 Streamlit Container Logs (last 50 lines):"
+        kubectl logs $POD -c cliente-integral -n $(namespace) --tail=50 || echo "No logs available yet"
+
+        echo ""
+        echo "🔧 Nginx Container Logs:"
+        kubectl logs $POD -c nginx-ssl -n $(namespace) --tail=20 || echo "No nginx logs available"
+
+        echo ""
+        echo "✅ Nginx Config Test:"
+        kubectl exec $POD -c nginx-ssl -n $(namespace) -- nginx -t 2>&1 || echo "Could not test nginx config"
+      done
+    displayName: 'Detailed diagnostics'
+    condition: always()
+
+  # --------------------------------------------------------------------------
+  # 10. Health check final
+  # --------------------------------------------------------------------------
+  - script: |
+      echo "🏥 Running health checks..."
+
+      # Obtener IP del servicio
+      SERVICE_IP=$(kubectl get svc cliente-integral-svc -n $(namespace) -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+
+      if [ -n "$SERVICE_IP" ]; then
+        echo "Service IP: $SERVICE_IP"
+
+        echo ""
+        echo "Testing health endpoint..."
+        kubectl run health-check-$(date +%s) \
+          --image=curlimages/curl:latest \
+          --restart=Never \
+          --rm \
+          -i \
+          --timeout=60s \
+          -n $(namespace) \
+          -- curl -s -o /dev/null -w "%{http_code}" http://$SERVICE_IP:3000/_stcore/health || echo "Health check completed"
+      else
+        echo "⚠️ Service IP not yet assigned (internal LB may take time)"
+      fi
+
+      echo ""
+      echo "═══════════════════════════════════════════════════════════"
+      echo "✅ Deployment Summary"
+      echo "═══════════════════════════════════════════════════════════"
+      echo "  Cluster:    $(aksCluster)"
+      echo "  Namespace:  $(namespace)"
+      echo "  Image:      $(fullImageName)"
+      echo "  URL:        https://$(apiUrl)"
+      echo "═══════════════════════════════════════════════════════════"
+    displayName: 'Final health check'
+    condition: always()

@@ -1,0 +1,33 @@
+# =============================================================================
+# service.yaml - Cliente Integral (Streamlit)
+# Internal LoadBalancer for AKS
+# =============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: cliente-integral-svc
+  namespace: ${NAMESPACE}
+  labels:
+    app: cliente-integral
+    environment: ${ENVIRONMENT_NAME}
+  annotations:
+    # Crear LoadBalancer interno (no expuesto a internet)
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+spec:
+  selector:
+    app: cliente-integral
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 80
+    - name: https
+      protocol: TCP
+      port: 443
+      targetPort: 443
+    - name: streamlit
+      protocol: TCP
+      port: 3000
+      targetPort: 3000
+  type: LoadBalancer

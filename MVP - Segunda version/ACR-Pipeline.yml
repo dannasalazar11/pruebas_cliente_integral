@@ -1,0 +1,81 @@
+# =============================================================================
+# ACR-Pipeline.yml - Build y Push a Azure Container Registry
+# Cliente Integral (Streamlit)
+# =============================================================================
+
+name: CLIENTE_INTEGRAL_ACR
+
+trigger:
+  branches:
+    include:
+      - qa
+      - master
+
+variables:
+  - name: imageName
+    value: cliente-integral
+
+  # --------------------------------------------------------------------------
+  # Configuración para QA
+  # --------------------------------------------------------------------------
+  - ${{ if eq(variables['Build.SourceBranchName'], 'qa') }}:
+    - name: imageTag
+      value: qa-$(Build.BuildId)
+    - name: acrName
+      value: cntregistry02
+
+  # --------------------------------------------------------------------------
+  # Configuración para Producción
+  # --------------------------------------------------------------------------
+  - ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
+    - name: imageTag
+      value: prod-$(Build.BuildId)
+    - name: acrName
+      value: cntregistry01
+
+  - name: fullImageName
+    value: $(acrName).azurecr.io/$(imageName):$(imageTag)
+
+pool:
+  vmImage: ubuntu-24.04
+
+steps:
+  # --------------------------------------------------------------------------
+  # Login a Azure Container Registry
+  # --------------------------------------------------------------------------
+  - task: AzureCLI@2
+    displayName: 'Login a ACR'
+    inputs:
+      azureSubscription: 'AzureSimple SoftwareONE_EFIGAS (33af18a4-ada4-4259-940e-de4c11f5ca58)'
+      scriptType: bash
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        az acr login --name $(acrName)
+
+  # --------------------------------------------------------------------------
+  # Build y Push de imagen Docker
+  # --------------------------------------------------------------------------
+  - script: |
+      echo "🔨 Building Docker image: $(fullImageName)"
+      docker build -t $(fullImageName) .
+
+      echo "📤 Pushing image to ACR..."
+      docker push $(fullImageName)
+
+      echo "✅ Image pushed successfully!"
+    displayName: 'Build and Push Docker image'
+
+  # --------------------------------------------------------------------------
+  # Guardar información de la imagen
+  # --------------------------------------------------------------------------
+  - script: |
+      echo "$(fullImageName)" > image.txt
+      echo "📝 Image name saved: $(fullImageName)"
+    displayName: 'Save image info'
+
+  # --------------------------------------------------------------------------
+  # Publicar artifact para el pipeline de AKS
+  # --------------------------------------------------------------------------
+  - publish: image.txt
+    artifact: image-info-cliente-integral
+    displayName: 'Publish artifact'
