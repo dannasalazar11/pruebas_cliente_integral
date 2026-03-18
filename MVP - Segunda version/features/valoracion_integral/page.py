@@ -1,6 +1,8 @@
 ﻿import streamlit as st
 
 from features.valoracion_integral.data import (
+    load_clientes_mayor_aporte,
+    load_combinaciones_servicios,
     load_consolidado_general,
     load_filter_options,
     load_kpis,
@@ -13,6 +15,7 @@ from features.valoracion_integral.sections import (
     render_consolidado_section,
     render_header,
     render_kpis,
+    render_nuevos_indicadores_section,
     render_penetracion_section,
 )
 from features.valoracion_integral.state import get_filters, initialize_state, update_filters
@@ -42,6 +45,10 @@ def render() -> None:
     df_penetracion = load_penetracion_servicios(filters)
     df_num_servicios = load_numero_servicios(filters)
     render_penetracion_section(df_penetracion, df_num_servicios)
+
+    df_combinaciones = load_combinaciones_servicios(filters)
+    df_aporte = load_clientes_mayor_aporte(filters)
+    render_nuevos_indicadores_section(df_combinaciones, df_aporte)
 
     df_consolidado = load_consolidado_general(filters)
     render_consolidado_section(df_consolidado, filters)

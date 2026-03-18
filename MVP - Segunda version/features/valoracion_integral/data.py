@@ -3,9 +3,11 @@ import streamlit as st
 
 from features.valoracion_integral.models import DashboardFilters
 from repositories.dashboard_queries import (
+    get_clientes_mayor_aporte_query,
     get_clasificacion_integral_distribution_query,
     get_clasificacion_integral_query,
     get_clasificacion_integral_temporal_query,
+    get_combinaciones_servicios_query,
     get_consolidado_general_query,
     get_detalle_servicio_query,
     get_filter_options_query,
@@ -14,6 +16,8 @@ from repositories.dashboard_queries import (
     get_penetracion_servicios_query,
 )
 from services.databricks_conn import run_query
+
+TABLE_PREVIEW_LIMIT = 100
 
 
 def _filters_kwargs(filters: DashboardFilters) -> dict[str, list[str] | str]:
@@ -47,6 +51,16 @@ def load_numero_servicios(filters: DashboardFilters) -> pd.DataFrame:
 
 
 @st.cache_data(ttl=300)
+def load_combinaciones_servicios(filters: DashboardFilters) -> pd.DataFrame:
+    return run_query(get_combinaciones_servicios_query(**_filters_kwargs(filters)))
+
+
+@st.cache_data(ttl=300)
+def load_clientes_mayor_aporte(filters: DashboardFilters) -> pd.DataFrame:
+    return run_query(get_clientes_mayor_aporte_query(**_filters_kwargs(filters)))
+
+
+@st.cache_data(ttl=300)
 def load_clasificacion_integral(filters: DashboardFilters) -> pd.DataFrame:
     return run_query(get_clasificacion_integral_query(**_filters_kwargs(filters)))
 
@@ -61,16 +75,20 @@ def load_clasificacion_integral_temporal(filters: DashboardFilters) -> pd.DataFr
     return run_query(get_clasificacion_integral_temporal_query(**_filters_kwargs(filters)))
 
 
-@st.cache_data(ttl=300)
-def load_consolidado_general(filters: DashboardFilters) -> pd.DataFrame:
-    return run_query(get_consolidado_general_query(**_filters_kwargs(filters)))
+@st.cache_data(ttl=300, show_spinner=False)
+def load_consolidado_general(
+    filters: DashboardFilters,
+    limit: int | None = TABLE_PREVIEW_LIMIT,
+) -> pd.DataFrame:
+    return run_query(get_consolidado_general_query(**_filters_kwargs(filters), limit=limit))
 
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=300, show_spinner=False)
 def load_detalle_servicio(
     filters: DashboardFilters,
     servicio: str,
     tipo_detalle: str,
+    limit: int | None = TABLE_PREVIEW_LIMIT,
 ) -> pd.DataFrame:
     return run_query(
         get_detalle_servicio_query(
@@ -81,5 +99,6 @@ def load_detalle_servicio(
             localidades=list(filters.localidades),
             barrios=list(filters.barrios),
             mercados=list(filters.mercados),
+            limit=limit,
         )
     )

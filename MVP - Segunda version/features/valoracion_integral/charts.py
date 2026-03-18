@@ -14,6 +14,8 @@ def render_penetracion_servicios_chart(df: pd.DataFrame) -> None:
     df = df.copy()
     df["clientes"] = df["clientes"].fillna(0)
     df = df.sort_values("clientes", ascending=True)
+    palette = ["#DCEBFA", "#B8D8F8", "#8EC5F4", "#5CA9E6", "#0B74C8"]
+    colors = palette[-len(df):]
 
     fig = go.Figure()
     fig.add_trace(
@@ -24,7 +26,7 @@ def render_penetracion_servicios_chart(df: pd.DataFrame) -> None:
             text=[human_format(value) for value in df["clientes"]],
             textposition="outside",
             marker=dict(
-                color=["#B8D8F8", "#5CA9E6", "#0B74C8"][-len(df):],
+                color=colors,
                 line=dict(color="#0B74C8", width=0),
             ),
             hovertemplate="<b>%{y}</b><br>Clientes: %{x:,}<extra></extra>",
@@ -64,7 +66,7 @@ def render_numero_servicios_chart(df: pd.DataFrame) -> None:
         lambda value: f"{value} servicio" if value == 1 else f"{value} servicios"
     )
 
-    color_map = {1: "#D94F4F", 2: "#0B74C8", 3: "#8EC5F4", 4: "#7A5AF8"}
+    color_map = {1: "#D94F4F", 2: "#0B74C8", 3: "#8EC5F4", 4: "#7A5AF8", 5: "#16A34A"}
     colors = [color_map.get(value, "#CBD5E1") for value in df["NumeroServicios"]]
 
     fig = go.Figure(
@@ -104,6 +106,83 @@ def render_numero_servicios_chart(df: pd.DataFrame) -> None:
             xanchor="left",
             font=dict(size=13, color="#475467"),
         ),
+    )
+
+    st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})
+
+
+def render_combinaciones_servicios_chart(df: pd.DataFrame) -> None:
+    if df.empty:
+        st.info("No hay datos para combinaciones de servicios.")
+        return
+
+    df = df.copy()
+    df["clientes"] = df["clientes"].fillna(0)
+    df = df.sort_values("clientes", ascending=True)
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            x=df["clientes"],
+            y=df["CombinacionServicios"],
+            orientation="h",
+            text=[human_format(value) for value in df["clientes"]],
+            textposition="outside",
+            marker=dict(color="#0B74C8"),
+            hovertemplate="<b>%{y}</b><br>Clientes: %{x:,}<extra></extra>",
+        )
+    )
+
+    fig.update_layout(
+        height=360,
+        margin=dict(l=10, r=30, t=10, b=10),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis=dict(title="", showgrid=True, gridcolor="#E8EEF5", zeroline=False, tickfont=dict(color="#7A869A")),
+        yaxis=dict(title="", showgrid=False, automargin=True, tickfont=dict(size=12, color="#5B657A")),
+        showlegend=False,
+        bargap=0.22,
+    )
+
+    st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})
+
+
+def render_clientes_mayor_aporte_chart(df: pd.DataFrame) -> None:
+    if df.empty:
+        st.info("No hay datos para clientes con mayor aporte.")
+        return
+
+    df = df.copy()
+    df["AporteTotal"] = df["AporteTotal"].fillna(0)
+    df = df.sort_values("AporteTotal", ascending=True)
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            x=df["AporteTotal"],
+            y=df["Cliente"],
+            customdata=df[["ServiciosActivos"]],
+            orientation="h",
+            text=[human_format(value) for value in df["AporteTotal"]],
+            textposition="outside",
+            marker=dict(color="#C4D600"),
+            hovertemplate=(
+                "<b>%{y}</b><br>"
+                "Aporte total: %{x:,.2f}<br>"
+                "Servicios: %{customdata[0]}<extra></extra>"
+            ),
+        )
+    )
+
+    fig.update_layout(
+        height=360,
+        margin=dict(l=10, r=30, t=10, b=10),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis=dict(title="", showgrid=True, gridcolor="#E8EEF5", zeroline=False, tickfont=dict(color="#7A869A")),
+        yaxis=dict(title="", showgrid=False, automargin=True, tickfont=dict(size=12, color="#5B657A")),
+        showlegend=False,
+        bargap=0.22,
     )
 
     st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})

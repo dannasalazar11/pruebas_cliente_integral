@@ -1,15 +1,37 @@
 ﻿import pandas as pd
 import streamlit as st
+import unicodedata
 
 from features.valoracion_integral.charts import (
+    render_clientes_mayor_aporte_chart,
     render_clasificacion_distribution_chart,
     render_clasificacion_temporal_chart,
+    render_combinaciones_servicios_chart,
     render_numero_servicios_chart,
     render_penetracion_servicios_chart,
 )
-from features.valoracion_integral.data import load_detalle_servicio
+from features.valoracion_integral.data import TABLE_PREVIEW_LIMIT, load_consolidado_general, load_detalle_servicio
 from features.valoracion_integral.formatters import format_millions, format_number
 from features.valoracion_integral.models import DashboardFilters
+
+
+CONSOLIDADO_SERVICE_LABELS = {
+    "Residencial": {
+        "consumo": "Consumo",
+        "rtr": "RTR",
+        "sad": "SAD",
+        "seguros": "Seguros",
+        "brilla": "Brilla",
+    },
+    "Comercial": {
+        "consumo": "Consumo",
+        "rtr": "RTR",
+        "efisoluciones": "EfiSoluciones",
+        "brilla": "Brilla",
+    },
+}
+
+CONSOLIDADO_SECTION_HEIGHT = 700
 
 
 def load_styles() -> None:
@@ -128,20 +150,20 @@ def render_kpis(df_kpis: pd.DataFrame) -> None:
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        render_kpi_card("Total de clientes", format_millions(row["TotalClientes"]), "👥")
+        render_kpi_card("Total de clientes", format_millions(row["TotalClientes"]), "👤")
     with col2:
         render_kpi_card("Total de contratos", format_millions(row["TotalContratos"]), "📄")
     with col3:
         render_kpi_card(
             "Promedio de servicios por cliente",
             format_number(row["PromedioServiciosPorCliente"], 2),
-            "🧱",
+            "🔗",
         )
     with col4:
         render_kpi_card(
-            "% de clientes con más de un servicio",
-            f"{format_number(row['PorcentajeClientesMasDeUnServicio'], 1)}%",
-            "☆",
+            "% de clientes con 3 o más servicios",
+            f"{format_number(row['PorcentajeClientesTresOMasServicios'], 1)}%",
+            "📊",
         )
 
 
@@ -175,6 +197,39 @@ def render_penetracion_section(df_penetracion: pd.DataFrame, df_num_servicios: p
             render_numero_servicios_chart(df_num_servicios)
 
 
+def render_nuevos_indicadores_section(
+    df_combinaciones: pd.DataFrame,
+    df_aporte: pd.DataFrame,
+) -> None:
+    col1, col2 = st.columns(2, gap="large")
+
+    with col1:
+        with st.container(border=True):
+            st.markdown(
+                """
+                <div style="font-size:1.05rem;font-weight:700;color:#334155;margin-bottom:0.2rem;">
+                    Combinaciones más usuales de servicios
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.caption("Ranking de las combinaciones de servicios más frecuentes en los clientes filtrados")
+            render_combinaciones_servicios_chart(df_combinaciones)
+
+    with col2:
+        with st.container(border=True):
+            st.markdown(
+                """
+                <div style="font-size:1.05rem;font-weight:700;color:#334155;margin-bottom:0.2rem;">
+                    Clientes con mayor aporte
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.caption("Clientes con mayor aporte total y servicios activos asociados")
+            render_clientes_mayor_aporte_chart(df_aporte)
+
+
 def render_clasificacion_section(df_distribution: pd.DataFrame, df_temporal: pd.DataFrame) -> None:
     col1, col2 = st.columns(2, gap="large")
 
@@ -205,19 +260,160 @@ def render_clasificacion_section(df_distribution: pd.DataFrame, df_temporal: pd.
             render_clasificacion_temporal_chart(df_temporal)
 
 
+def _normalize_column_name(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value)
+    return "".join(char for char in normalized if not unicodedata.combining(char)).lower()
+
+
+def _rename_columns_by_normalized_name(df: pd.DataFrame, rename_map: dict[str, str]) -> pd.DataFrame:
+    normalized_map = {_normalize_column_name(source): target for source, target in rename_map.items()}
+    return df.rename(
+        columns={
+            column: normalized_map.get(_normalize_column_name(column), column)
+            for column in df.columns
+        }
+    )
+
+
+def _prepare_consolidado_download_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
+
+    df = df.copy()
+    df.columns = [
+        "".join(
+            char
+            for char in unicodedata.normalize("NFKD", str(column))
+            if not unicodedata.combining(char)
+        )
+        for column in df.columns
+    ]
+    for column in df.columns:
+        if _normalize_column_name(str(column)) == "tipoidentificacion":
+            df[column] = df[column].apply(
+                lambda value: "".join(
+                    char
+                    for char in unicodedata.normalize("NFKD", value)
+                    if not unicodedata.combining(char)
+                )
+                if isinstance(value, str)
+                else value
+            )
+    return df
+
+
 def _format_consolidado_dataframe(df: pd.DataFrame, categoria: str) -> pd.DataFrame:
     if df.empty:
         return df
 
     df = df.copy()
-    servicio_extra_col = "SAD" if categoria == "Residencial" else "EfiSoluciones"
-    df = df.rename(columns={"ServicioExtra": servicio_extra_col})
+    df = _rename_columns_by_normalized_name(
+        df,
+        {
+            "tipoidentificacion": "TipoIdentificacion",
+            "identificacion": "Identificacion",
+            **CONSOLIDADO_SERVICE_LABELS[categoria],
+        },
+    )
 
-    for col in ["Consumo", "RTR", servicio_extra_col]:
+    for col in CONSOLIDADO_SERVICE_LABELS[categoria].values():
         if col in df.columns:
-            df[col] = df[col].apply(lambda value: "✓" if value == 1 else "✕")
+            numeric_values = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
+            df[col] = numeric_values.apply(lambda value: "✅ Activo" if value == 1 else "❌ Inactivo")
 
     return df
+
+
+def _get_numeric_columns(df: pd.DataFrame) -> list[str]:
+    return df.select_dtypes(include=["number"]).columns.tolist()
+
+
+def _get_zero_to_one_columns(df: pd.DataFrame, excluded_columns: list[str] | None = None) -> list[str]:
+    excluded = set(excluded_columns or [])
+    valid_columns: list[str] = []
+
+    for column in _get_numeric_columns(df):
+        if column in excluded:
+            continue
+        values = df[column].dropna()
+        if values.empty:
+            continue
+        if ((values >= 0) & (values <= 1)).all():
+            valid_columns.append(column)
+
+    return valid_columns
+
+
+def _style_consolidado_dataframe(df: pd.DataFrame, categoria: str):
+    service_columns = [
+        column for column in CONSOLIDADO_SERVICE_LABELS[categoria].values() if column in df.columns
+    ]
+    numeric_columns = [column for column in _get_numeric_columns(df) if column not in service_columns]
+
+    def service_cell_style(value: object) -> str:
+        if value == "✅ Activo":
+            return "background-color: #e8f7ee; color: #166534; font-weight: 600; text-align: center;"
+        if value == "❌ Inactivo":
+            return "background-color: #fdecec; color: #b42318; font-weight: 600; text-align: center;"
+        return ""
+
+    styled = df.style
+    if service_columns:
+        styled = styled.map(service_cell_style, subset=service_columns)
+    if numeric_columns:
+        styled = styled.format("{:.2f}", subset=numeric_columns)
+
+    return styled.set_properties(
+        **{
+            "border-color": "#e7edf3",
+            "font-size": "0.92rem",
+        }
+    )
+
+
+def _style_detalle_dataframe(df: pd.DataFrame, tipo_detalle: str):
+    excluded_columns = [
+        column
+        for column in df.columns
+        if _normalize_column_name(str(column)) in {"tipoidentificacion", "identificacion"}
+    ]
+    numeric_columns = _get_numeric_columns(df)
+    styled = df.style
+    if numeric_columns:
+        styled = styled.format("{:.2f}", subset=numeric_columns)
+
+    return styled.set_properties(
+        **{
+            "border-color": "#e7edf3",
+            "font-size": "0.92rem",
+        }
+    )
+
+
+@st.fragment
+def _render_lazy_download_button(
+    *,
+    button_label: str,
+    download_label: str,
+    cache_key: str,
+    file_name: str,
+    query_loader,
+    formatter,
+) -> None:
+    if st.button(button_label, key=f"{cache_key}_prepare"):
+        with st.spinner("Consultando la tabla completa para descarga..."):
+            st.session_state[cache_key] = formatter(query_loader())
+
+    cached_df = st.session_state.get(cache_key)
+    if cached_df is not None:
+        st.download_button(
+            download_label,
+            cached_df.to_csv(index=False).encode("utf-8"),
+            file_name,
+            "text/csv",
+            key=f"{cache_key}_download",
+            on_click="ignore",
+        )
 
 
 def render_consolidado_section(
@@ -229,31 +425,46 @@ def render_consolidado_section(
     df_consolidado_fmt = _format_consolidado_dataframe(df_consolidado, categoria)
 
     with col1:
-        with st.container(border=True):
+        with st.container(border=True, height=CONSOLIDADO_SECTION_HEIGHT):
             st.markdown("### Consolidado General")
 
             if df_consolidado_fmt.empty:
                 st.info("No hay información consolidada para los filtros seleccionados.")
             else:
-                st.dataframe(df_consolidado_fmt, width='stretch', height=420)
-                st.download_button(
-                    "Descargar CSV",
-                    df_consolidado_fmt.to_csv(index=False).encode("utf-8"),
-                    "consolidado_general.csv",
-                    "text/csv",
-                    key="download_consolidado_general",
-                    on_click="ignore",
+                st.caption(f"Mostrando top {TABLE_PREVIEW_LIMIT} registros para cuidar memoria.")
+                st.dataframe(
+                    _style_consolidado_dataframe(df_consolidado_fmt, categoria),
+                    width='stretch',
+                    height=420,
+                )
+                _render_lazy_download_button(
+                    button_label="Preparar descarga completa",
+                    download_label="Descargar CSV completo",
+                    cache_key=f"consolidado_full_{categoria}_{hash(filters)}",
+                    file_name="consolidado_general.csv",
+                    query_loader=lambda: load_consolidado_general(filters, limit=None),
+                    formatter=_prepare_consolidado_download_dataframe,
                 )
 
     with col2:
-        with st.container(border=True):
+        with st.container(border=True, height=CONSOLIDADO_SECTION_HEIGHT):
             st.markdown("### Detalle por Servicio")
 
-            servicios = [
-                ("consumo", "Consumo"),
-                ("rtr", "RTR"),
-                ("sad", "SAD") if categoria == "Residencial" else ("efisoluciones", "EfiSoluciones"),
-            ]
+            if categoria == "Residencial":
+                servicios = [
+                    ("consumo", "Consumo"),
+                    ("rtr", "RTR"),
+                    ("sad", "SAD"),
+                    ("seguros", "Seguros"),
+                    ("brilla", "Brilla"),
+                ]
+            else:
+                servicios = [
+                    ("consumo", "Consumo"),
+                    ("rtr", "RTR"),
+                    ("efisoluciones", "EfiSoluciones"),
+                    ("brilla", "Brilla"),
+                ]
             tipos = [
                 ("Dimensiones", "dimensiones"),
                 ("Indicadores", "indicadores"),
@@ -273,12 +484,24 @@ def render_consolidado_section(
                             if df_detalle.empty:
                                 st.info("No hay detalle disponible para esta combinación.")
                             else:
-                                st.dataframe(df_detalle, width='stretch', height=380)
-                                st.download_button(
-                                    "Descargar CSV",
-                                    df_detalle.to_csv(index=False).encode("utf-8"),
-                                    f"{servicio}_{tipo_value}.csv",
-                                    "text/csv",
-                                    key=f"download_{categoria}_{servicio}_{tipo_value}",
-                                    on_click="ignore",
+                                st.caption(f"Mostrando top {TABLE_PREVIEW_LIMIT} registros para cuidar memoria.")
+                                st.dataframe(
+                                    _style_detalle_dataframe(df_detalle, tipo_value),
+                                    width='stretch',
+                                    height=380,
+                                )
+                                _render_lazy_download_button(
+                                    button_label="Preparar descarga completa",
+                                    download_label="Descargar CSV completo",
+                                    cache_key=(
+                                        f"detalle_full_{categoria}_{servicio}_{tipo_value}_{hash(filters)}"
+                                    ),
+                                    file_name=f"{servicio}_{tipo_value}.csv",
+                                    query_loader=lambda s=servicio, t=tipo_value: load_detalle_servicio(
+                                        filters=filters,
+                                        servicio=s,
+                                        tipo_detalle=t,
+                                        limit=None,
+                                    ),
+                                    formatter=lambda df: df,
                                 )
