@@ -319,7 +319,7 @@ def _format_consolidado_dataframe(df: pd.DataFrame, categoria: str) -> pd.DataFr
     for col in CONSOLIDADO_SERVICE_LABELS[categoria].values():
         if col in df.columns:
             numeric_values = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
-            df[col] = numeric_values.apply(lambda value: "✅ Activo" if value == 1 else "❌ Inactivo")
+            df[col] = numeric_values.apply(lambda value: "✅" if value == 1 else "❌")
 
     return df
 
@@ -351,9 +351,9 @@ def _style_consolidado_dataframe(df: pd.DataFrame, categoria: str):
     numeric_columns = [column for column in _get_numeric_columns(df) if column not in service_columns]
 
     def service_cell_style(value: object) -> str:
-        if value == "✅ Activo":
+        if value == "✅":
             return "background-color: #e8f7ee; color: #166534; font-weight: 600; text-align: center;"
-        if value == "❌ Inactivo":
+        if value == "❌":
             return "background-color: #fdecec; color: #b42318; font-weight: 600; text-align: center;"
         return ""
 

@@ -2,10 +2,10 @@
 import streamlit as st
 
 from components.layout import render_footer, render_header
-from components.placeholders import render_placeholder_page
 from components.styles import load_base_css
 from core.navigation import PageDefinition, render_navigation
 from core.session import NAVIGATION_KEY, reset_app_state
+from views.buscador_clientes import render as render_buscador_clientes
 from views.informacion_general import render as render_informacion_general
 from views.valoracion_integral import render as render_valoracion_integral
 
@@ -34,16 +34,10 @@ def build_pages() -> list[PageDefinition]:
             render=render_valoracion_integral,
         ),
         PageDefinition(
-            page_id="comportamiento_servicio",
-            nav_label="📈 Comportamiento por Servicio",
-            title="Comportamiento por Servicio",
-            render=lambda: render_placeholder_page("Comportamiento por Servicio"),
-        ),
-        PageDefinition(
-            page_id="decisiones_estrategicas",
-            nav_label="🎯 Decisiones Estrategias",
-            title="Decisiones Estratégicas",
-            render=lambda: render_placeholder_page("Decisiones Estratégicas"),
+            page_id="buscador_clientes",
+            nav_label="🔎 Buscador de clientes",
+            title="Buscador de clientes",
+            render=render_buscador_clientes,
         ),
     ]
 
