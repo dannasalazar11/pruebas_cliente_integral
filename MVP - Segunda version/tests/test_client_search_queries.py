@@ -2,6 +2,7 @@ import unittest
 
 from repositories.client_search_queries import (
     get_cliente_contratos_raw_query,
+    get_cliente_contratos_summary_query,
     get_cliente_detalle_servicio_query,
     get_cliente_dimensiones_query,
     get_cliente_raw_query,
@@ -26,6 +27,13 @@ class ClientSearchQueriesTestCase(unittest.TestCase):
     def test_cliente_contratos_raw_query_filters_person(self) -> None:
         query = get_cliente_contratos_raw_query("CC", "123")
         self.assertIn("modelo_datosclienteresidencial", query)
+        self.assertIn("TipoIdentificacion = 'CC'", query)
+        self.assertIn("Identificacion = '123'", query)
+
+    def test_cliente_contratos_summary_query_uses_summary_table(self) -> None:
+        query = get_cliente_contratos_summary_query("CC", "123")
+        self.assertIn("modelo_contratosresidencial", query)
+        self.assertIn("ContratosActivos", query)
         self.assertIn("TipoIdentificacion = 'CC'", query)
         self.assertIn("Identificacion = '123'", query)
 

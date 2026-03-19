@@ -1,4 +1,5 @@
 import re
+from collections.abc import Iterable
 
 import pandas as pd
 import streamlit as st
@@ -7,6 +8,7 @@ from features.buscador_clientes.models import CustomerProfile, CustomerSearchReq
 from repositories.dashboard_queries import get_dimension_service_columns
 from repositories.client_search_queries import (
     get_cliente_contratos_raw_query,
+    get_cliente_contratos_summary_query,
     get_cliente_detalle_servicio_query,
     get_cliente_dimensiones_query,
     get_cliente_raw_query,
@@ -41,6 +43,7 @@ FULL_NAME_CANDIDATES = [
     "nombrecompleto",
 ]
 CONTRACT_COLUMN_CANDIDATES = ["Contrato", "Contratos", "contrato", "contratos"]
+ACTIVE_CONTRACT_COLUMN_CANDIDATES = ["ContratosActivos", "contratosactivos", "contratos_activos"]
 DETALLE_TIPOS = ("dimensiones", "indicadores", "variables")
 
 
@@ -91,12 +94,7 @@ def _extract_contracts(df: pd.DataFrame) -> list[str]:
 
     contracts: list[str] = []
     for value in df[contract_column].dropna().tolist():
-        if isinstance(value, str):
-            parts = [part.strip() for part in re.split(r"[|,;]", value) if part.strip()]
-            normalized_parts = [part.strip().strip("[]()'\"") for part in (parts or [value.strip()])]
-            contracts.extend([part for part in normalized_parts if part])
-        else:
-            contracts.append(str(value).strip())
+        contracts.extend(_extract_contract_items_from_value(value))
 
     seen: set[str] = set()
     unique_contracts: list[str] = []
@@ -105,6 +103,56 @@ def _extract_contracts(df: pd.DataFrame) -> list[str]:
             seen.add(contract)
             unique_contracts.append(contract)
     return unique_contracts
+
+
+def _extract_contract_items_from_value(value: object) -> list[str]:
+    if value is None:
+        return []
+
+    if isinstance(value, str):
+        cleaned_value = value.strip()
+        if not cleaned_value or cleaned_value in {"[]", "[ ]"}:
+            return []
+        # Soporta listas tipo "[1,2]", "[1 2]" o formatos similares.
+        return [token for token in re.findall(r"[A-Za-z0-9_-]+", cleaned_value) if token]
+
+    if isinstance(value, Iterable) and not isinstance(value, (str, bytes, dict)):
+        items: list[str] = []
+        for item in value:
+            items.extend(_extract_contract_items_from_value(item))
+        return items
+
+    if hasattr(value, "tolist") and not isinstance(value, (str, bytes)):
+        try:
+            return _extract_contract_items_from_value(value.tolist())
+        except Exception:
+            pass
+
+    text_value = str(value).strip()
+    return [text_value] if text_value else []
+
+
+def _count_contract_list_items(df: pd.DataFrame, column_candidates: list[str]) -> int:
+    if df.empty:
+        return 0
+
+    contract_column = _find_first_matching_column(df, column_candidates)
+    if not contract_column:
+        return 0
+
+    total_items = 0
+    for value in df[contract_column].dropna().tolist():
+        total_items += len(_extract_contract_items_from_value(value))
+    return total_items
+
+
+def _extract_contract_summary(df: pd.DataFrame) -> tuple[int, int]:
+    if df.empty:
+        return 0, 0
+
+    total_contracts = _count_contract_list_items(df, CONTRACT_COLUMN_CANDIDATES)
+    active_contracts = _count_contract_list_items(df, ACTIVE_CONTRACT_COLUMN_CANDIDATES)
+    return total_contracts, active_contracts
 
 
 def _get_active_services(dimensiones_df: pd.DataFrame, universo: str) -> tuple[str, ...]:
@@ -142,6 +190,11 @@ def load_cliente_raw(tipo_identificacion: str, identificacion: str) -> pd.DataFr
 @st.cache_data(ttl=300, show_spinner=False)
 def load_cliente_contratos_raw(tipo_identificacion: str, identificacion: str) -> pd.DataFrame:
     return run_query(get_cliente_contratos_raw_query(tipo_identificacion, identificacion))
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_cliente_contratos_summary_raw(tipo_identificacion: str, identificacion: str) -> pd.DataFrame:
+    return run_query(get_cliente_contratos_summary_query(tipo_identificacion, identificacion))
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -223,3 +276,59 @@ def search_customer(request: CustomerSearchRequest) -> CustomerSearchResult:
         servicios_activos=servicios_activos,
         detalle_servicios=detalle_servicios,
     )
+
+
+def load_customer_profile(request: CustomerSearchRequest) -> CustomerProfile | None:
+    cliente_raw = load_cliente_raw(request.tipo_identificacion, request.identificacion)
+    if cliente_raw.empty:
+        return None
+
+    nombre, apellido = _extract_name_parts(cliente_raw)
+    return CustomerProfile(
+        nombre=nombre,
+        apellido=apellido,
+        tipo_identificacion=request.tipo_identificacion,
+        identificacion=request.identificacion,
+    )
+
+
+def load_customer_integral(request: CustomerSearchRequest) -> tuple[pd.DataFrame, tuple[str, ...]]:
+    dimensiones = load_cliente_dimensiones(request.tipo_identificacion, request.identificacion, request.universo)
+    servicios_activos = _get_active_services(dimensiones, request.universo)
+    return dimensiones, servicios_activos
+
+
+def load_customer_service_details(
+    request: CustomerSearchRequest,
+    servicios_activos: tuple[str, ...],
+) -> dict[str, dict[str, pd.DataFrame]]:
+    detalle_servicios: dict[str, dict[str, pd.DataFrame]] = {}
+    service_lookup = {label: column.lower() for column, label in get_dimension_service_columns(request.universo)}
+
+    for servicio_label in servicios_activos:
+        service_key = service_lookup.get(servicio_label)
+        if not service_key:
+            continue
+        detalle_servicios[servicio_label] = {
+            tipo: load_cliente_detalle_servicio(
+                request.tipo_identificacion,
+                request.identificacion,
+                request.universo,
+                service_key,
+                tipo,
+            )
+            for tipo in DETALLE_TIPOS
+        }
+
+    return detalle_servicios
+
+
+def load_customer_contracts(request: CustomerSearchRequest) -> pd.DataFrame:
+    contratos_raw = load_cliente_contratos_raw(request.tipo_identificacion, request.identificacion)
+    contracts = _extract_contracts(contratos_raw)
+    return load_contratos_detalle(tuple(contracts), request.universo)
+
+
+def load_customer_contracts_summary(request: CustomerSearchRequest) -> tuple[int, int]:
+    contratos_summary_raw = load_cliente_contratos_summary_raw(request.tipo_identificacion, request.identificacion)
+    return _extract_contract_summary(contratos_summary_raw)

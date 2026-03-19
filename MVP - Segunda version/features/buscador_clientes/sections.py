@@ -314,6 +314,474 @@ def render_contracts_section(df_contracts: pd.DataFrame) -> None:
                 st.markdown(f"**Mercado:** {row.get('Mercado', 'No disponible')}")
 
 
+def _normalize_metric_value(value: object) -> object:
+    if isinstance(value, pd.Series):
+        cleaned = [item for item in value.tolist() if not pd.isna(item)]
+        if not cleaned:
+            return None
+        if len(cleaned) == 1:
+            return cleaned[0]
+        return " | ".join(str(item) for item in cleaned)
+
+    if hasattr(value, "tolist") and not isinstance(value, (str, bytes)):
+        try:
+            as_list = value.tolist()
+        except Exception:
+            as_list = value
+        if isinstance(as_list, list):
+            flattened = []
+            for item in as_list:
+                if isinstance(item, list):
+                    flattened.extend(item)
+                else:
+                    flattened.append(item)
+            cleaned = [item for item in flattened if not pd.isna(item)]
+            if not cleaned:
+                return None
+            if len(cleaned) == 1:
+                return cleaned[0]
+            return " | ".join(str(item) for item in cleaned)
+
+    return value
+
+
+def _format_metric_value(value: object) -> str:
+    normalized = _normalize_metric_value(value)
+    if normalized is None:
+        return "No disponible"
+
+    try:
+        is_missing = pd.isna(normalized)
+    except (TypeError, ValueError):
+        is_missing = False
+
+    if isinstance(is_missing, (list, tuple)):
+        is_missing = all(is_missing)
+    elif hasattr(is_missing, "all") and not isinstance(is_missing, bool):
+        try:
+            is_missing = bool(is_missing.all())
+        except Exception:
+            is_missing = False
+
+    if is_missing:
+        return "No disponible"
+
+    if isinstance(normalized, (int, float)) and not isinstance(normalized, bool):
+        return f"{normalized:.2f}"
+
+    return str(normalized)
+
+
+def _score_progress_html(value: object) -> str:
+    normalized = _normalize_metric_value(value)
+    try:
+        numeric = float(normalized)
+    except (TypeError, ValueError):
+        return ""
+
+    if numeric < 0 or numeric > 1:
+        return ""
+
+    width = max(0.0, min(100.0, numeric * 100.0))
+    return f'<div class="metric-track"><div class="metric-fill" style="width:{width:.1f}%"></div></div>'
+
+
+def _render_metric_card(label: str, value: object) -> None:
+    html = (
+        f'<div class="metric-card">'
+        f'<div class="metric-label">{label}</div>'
+        f'<div class="metric-value">{_format_metric_value(value)}</div>'
+        f'{_score_progress_html(value)}'
+        f'</div>'
+    )
+    st.markdown(html, unsafe_allow_html=True)
+
+
+def _normalize_metric_value(value: object) -> object:
+    if isinstance(value, pd.Series):
+        cleaned = [item for item in value.tolist() if not pd.isna(item)]
+        if not cleaned:
+            return None
+        if len(cleaned) == 1:
+            return cleaned[0]
+        return " | ".join(str(item) for item in cleaned)
+
+    if hasattr(value, "tolist") and not isinstance(value, (str, bytes)):
+        try:
+            as_list = value.tolist()
+        except Exception:
+            as_list = value
+        if isinstance(as_list, list):
+            flattened = []
+            for item in as_list:
+                if isinstance(item, list):
+                    flattened.extend(item)
+                else:
+                    flattened.append(item)
+            cleaned = [item for item in flattened if not pd.isna(item)]
+            if not cleaned:
+                return None
+            if len(cleaned) == 1:
+                return cleaned[0]
+            return " | ".join(str(item) for item in cleaned)
+
+    return value
+
+
+def _format_metric_value(value: object) -> str:
+    normalized = _normalize_metric_value(value)
+    if normalized is None:
+        return "No disponible"
+
+    try:
+        is_missing = pd.isna(normalized)
+    except (TypeError, ValueError):
+        is_missing = False
+
+    if isinstance(is_missing, (list, tuple)):
+        is_missing = all(is_missing)
+    elif hasattr(is_missing, "all") and not isinstance(is_missing, bool):
+        try:
+            is_missing = bool(is_missing.all())
+        except Exception:
+            is_missing = False
+
+    if is_missing:
+        return "No disponible"
+
+    if isinstance(normalized, (int, float)) and not isinstance(normalized, bool):
+        return f"{normalized:.2f}"
+
+    return str(normalized)
+
+
+def _score_progress_html(value: object) -> str:
+    normalized = _normalize_metric_value(value)
+    try:
+        numeric = float(normalized)
+    except (TypeError, ValueError):
+        return ""
+
+    if numeric < 0 or numeric > 1:
+        return ""
+
+    width = max(0.0, min(100.0, numeric * 100.0))
+    return f'<div class="metric-track"><div class="metric-fill" style="width:{width:.1f}%"></div></div>'
+
+
+def _render_metric_card(label: str, value: object) -> None:
+    html = (
+        f'<div class="metric-card">'
+        f'<div class="metric-label">{label}</div>'
+        f'<div class="metric-value">{_format_metric_value(value)}</div>'
+        f'{_score_progress_html(value)}'
+        f'</div>'
+    )
+    st.markdown(html, unsafe_allow_html=True)
+
+
+def _normalize_metric_value(value: object) -> object:
+    if isinstance(value, pd.Series):
+        cleaned = [item for item in value.tolist() if not pd.isna(item)]
+        if not cleaned:
+            return None
+        if len(cleaned) == 1:
+            return cleaned[0]
+        return " | ".join(str(item) for item in cleaned)
+
+    if hasattr(value, "tolist") and not isinstance(value, (str, bytes)):
+        try:
+            as_list = value.tolist()
+        except Exception:
+            as_list = value
+        if isinstance(as_list, list):
+            flattened = []
+            for item in as_list:
+                if isinstance(item, list):
+                    flattened.extend(item)
+                else:
+                    flattened.append(item)
+            cleaned = [item for item in flattened if not pd.isna(item)]
+            if not cleaned:
+                return None
+            if len(cleaned) == 1:
+                return cleaned[0]
+            return " | ".join(str(item) for item in cleaned)
+
+    return value
+
+
+def _format_metric_value(value: object) -> str:
+    normalized = _normalize_metric_value(value)
+    if normalized is None:
+        return "No disponible"
+
+    try:
+        is_missing = pd.isna(normalized)
+    except (TypeError, ValueError):
+        is_missing = False
+
+    if isinstance(is_missing, (list, tuple)):
+        is_missing = all(is_missing)
+    elif hasattr(is_missing, "all") and not isinstance(is_missing, bool):
+        try:
+            is_missing = bool(is_missing.all())
+        except Exception:
+            is_missing = False
+
+    if is_missing:
+        return "No disponible"
+
+    if isinstance(normalized, (int, float)) and not isinstance(normalized, bool):
+        return f"{normalized:.2f}"
+
+    return str(normalized)
+
+
+def _score_progress_html(value: object) -> str:
+    normalized = _normalize_metric_value(value)
+    try:
+        numeric = float(normalized)
+    except (TypeError, ValueError):
+        return ""
+
+    if numeric < 0 or numeric > 1:
+        return ""
+
+    width = max(0.0, min(100.0, numeric * 100.0))
+    return f'<div class="metric-track"><div class="metric-fill" style="width:{width:.1f}%"></div></div>'
+
+
+def _render_metric_card(label: str, value: object) -> None:
+    html = (
+        f'<div class="metric-card">'
+        f'<div class="metric-label">{label}</div>'
+        f'<div class="metric-value">{_format_metric_value(value)}</div>'
+        f'{_score_progress_html(value)}'
+        f'</div>'
+    )
+    st.markdown(html, unsafe_allow_html=True)
+
+
+def _normalize_metric_value(value: object) -> object:
+    if isinstance(value, pd.Series):
+        cleaned = [item for item in value.tolist() if not pd.isna(item)]
+        if not cleaned:
+            return None
+        if len(cleaned) == 1:
+            return cleaned[0]
+        return " | ".join(str(item) for item in cleaned)
+
+    if hasattr(value, "tolist") and not isinstance(value, (str, bytes)):
+        try:
+            as_list = value.tolist()
+        except Exception:
+            as_list = value
+        if isinstance(as_list, list):
+            flattened = []
+            for item in as_list:
+                if isinstance(item, list):
+                    flattened.extend(item)
+                else:
+                    flattened.append(item)
+            cleaned = [item for item in flattened if not pd.isna(item)]
+            if not cleaned:
+                return None
+            if len(cleaned) == 1:
+                return cleaned[0]
+            return " | ".join(str(item) for item in cleaned)
+
+    return value
+
+
+def _format_metric_value(value: object) -> str:
+    normalized = _normalize_metric_value(value)
+    if normalized is None:
+        return "No disponible"
+    try:
+        if pd.isna(normalized):
+            return "No disponible"
+    except (TypeError, ValueError):
+        pass
+    if isinstance(normalized, (int, float)) and not isinstance(normalized, bool):
+        return f"{normalized:.2f}"
+    return str(normalized)
+
+
+def _normalize_metric_value(value: object) -> object:
+    if isinstance(value, pd.Series):
+        cleaned = [item for item in value.tolist() if not pd.isna(item)]
+        if not cleaned:
+            return None
+        if len(cleaned) == 1:
+            return cleaned[0]
+        return " | ".join(str(item) for item in cleaned)
+
+    if hasattr(value, "tolist") and not isinstance(value, (str, bytes)):
+        try:
+            as_list = value.tolist()
+        except Exception:
+            as_list = value
+        if isinstance(as_list, list):
+            flattened = []
+            for item in as_list:
+                if isinstance(item, list):
+                    flattened.extend(item)
+                else:
+                    flattened.append(item)
+            cleaned = [item for item in flattened if not pd.isna(item)]
+            if not cleaned:
+                return None
+            if len(cleaned) == 1:
+                return cleaned[0]
+            return " | ".join(str(item) for item in cleaned)
+
+    return value
+
+
+def _format_metric_value(value: object) -> str:
+    normalized = _normalize_metric_value(value)
+    if normalized is None:
+        return "No disponible"
+    try:
+        if pd.isna(normalized):
+            return "No disponible"
+    except (TypeError, ValueError):
+        pass
+    if isinstance(normalized, (int, float)) and not isinstance(normalized, bool):
+        return f"{normalized:.2f}"
+    return str(normalized)
+
+
+def _score_progress_html(value: object) -> str:
+    normalized = _normalize_metric_value(value)
+    try:
+        numeric = float(normalized)
+    except (TypeError, ValueError):
+        return ""
+
+    if numeric < 0 or numeric > 1:
+        return ""
+
+    width = max(0.0, min(100.0, numeric * 100.0))
+    return f'<div class="metric-track"><div class="metric-fill" style="width:{width:.1f}%"></div></div>'
+
+
+def _render_metric_card(label: str, value: object) -> None:
+    html = (
+        f'<div class="metric-card">'
+        f'<div class="metric-label">{label}</div>'
+        f'<div class="metric-value">{_format_metric_value(value)}</div>'
+        f'{_score_progress_html(value)}'
+        f'</div>'
+    )
+    st.markdown(html, unsafe_allow_html=True)
+
+
+def _normalize_metric_value(value: object) -> object:
+    if isinstance(value, pd.Series):
+        cleaned = [item for item in value.tolist() if not pd.isna(item)]
+        if not cleaned:
+            return None
+        if len(cleaned) == 1:
+            return cleaned[0]
+        return " | ".join(str(item) for item in cleaned)
+
+    if hasattr(value, "tolist") and not isinstance(value, (str, bytes)):
+        try:
+            as_list = value.tolist()
+        except Exception:
+            as_list = value
+        if isinstance(as_list, list):
+            flattened = []
+            for item in as_list:
+                if isinstance(item, list):
+                    flattened.extend(item)
+                else:
+                    flattened.append(item)
+            cleaned = [item for item in flattened if not pd.isna(item)]
+            if not cleaned:
+                return None
+            if len(cleaned) == 1:
+                return cleaned[0]
+            return " | ".join(str(item) for item in cleaned)
+
+    return value
+
+
+def _format_metric_value(value: object) -> str:
+    normalized = _normalize_metric_value(value)
+    if normalized is None:
+        return "No disponible"
+    try:
+        if pd.isna(normalized):
+            return "No disponible"
+    except (TypeError, ValueError):
+        pass
+    if isinstance(normalized, (int, float)) and not isinstance(normalized, bool):
+        return f"{normalized:.2f}"
+    return str(normalized)
+
+
+def _normalize_metric_value(value: object) -> object:
+    if isinstance(value, pd.Series):
+        cleaned = [item for item in value.tolist() if not pd.isna(item)]
+        if not cleaned:
+            return None
+        if len(cleaned) == 1:
+            return cleaned[0]
+        return " | ".join(str(item) for item in cleaned)
+
+    if hasattr(value, "tolist") and not isinstance(value, (str, bytes)):
+        try:
+            as_list = value.tolist()
+        except Exception:
+            as_list = value
+        if isinstance(as_list, list):
+            flattened = []
+            for item in as_list:
+                if isinstance(item, list):
+                    flattened.extend(item)
+                else:
+                    flattened.append(item)
+            cleaned = [item for item in flattened if not pd.isna(item)]
+            if not cleaned:
+                return None
+            if len(cleaned) == 1:
+                return cleaned[0]
+            return " | ".join(str(item) for item in cleaned)
+
+    return value
+
+
+def _format_metric_value(value: object) -> str:
+    normalized = _normalize_metric_value(value)
+    if normalized is None:
+        return "No disponible"
+    try:
+        if pd.isna(normalized):
+            return "No disponible"
+    except (TypeError, ValueError):
+        pass
+    if isinstance(normalized, (int, float)) and not isinstance(normalized, bool):
+        return f"{normalized:.2f}"
+    return str(normalized)
+
+
+def _score_progress_html(value: object) -> str:
+    normalized = _normalize_metric_value(value)
+    try:
+        numeric = float(normalized)
+    except (TypeError, ValueError):
+        return ""
+
+    if numeric < 0 or numeric > 1:
+        return ""
+
+    width = max(0.0, min(100.0, numeric * 100.0))
+    return f'<div class="metric-track"><div class="metric-fill" style="width:{width:.1f}%"></div></div>'
+
+
 def _style_detail_dataframe(df: pd.DataFrame):
     numeric_columns = df.select_dtypes(include=["number"]).columns.tolist()
     styled = df.style
@@ -571,3 +1039,54 @@ def render_customer_integral_overview(
                     ]
                 )
                 st.markdown(f'<div class="service-chip-wrap">{chips}</div>', unsafe_allow_html=True)
+
+
+def _score_progress_html(value: object) -> str:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return ""
+
+    if numeric < 0 or numeric > 1:
+        return ""
+
+    width = max(0.0, min(100.0, numeric * 100.0))
+    return f'<div class="metric-track"><div class="metric-fill" style="width:{width:.1f}%"></div></div>'
+
+
+def _render_metric_card(label: str, value: object) -> None:
+    html = (
+        f'<div class="metric-card">'
+        f'<div class="metric-label">{label}</div>'
+        f'<div class="metric-value">{_format_metric_value(value)}</div>'
+        f'{_score_progress_html(value)}'
+        f'</div>'
+    )
+    st.markdown(html, unsafe_allow_html=True)
+
+
+def render_contracts_section(df_contracts: pd.DataFrame) -> None:
+    if df_contracts.empty:
+        st.info("Actualmente no es suscriptor de ningún contrato.")
+        return
+
+    st.markdown("### Contratos")
+
+    for _, row in df_contracts.iterrows():
+        contrato = row.get("Contrato", "Sin contrato")
+        estado = row.get("Estado", "Sin estado")
+        with st.expander(f"Contrato {contrato} | Estado: {estado}", expanded=False):
+            col1, col2 = st.columns(2, gap="large")
+
+            with col1:
+                st.markdown(f"**Contrato:** {contrato}")
+                st.markdown(f"**Estado:** {estado}")
+                st.markdown(f"**Categoría:** {row.get('Categoria', 'No disponible')}")
+                st.markdown(f"**Subcategoría:** {row.get('Subcategoria', 'No disponible')}")
+                st.markdown(f"**Dirección:** {row.get('Direccion', 'No disponible')}")
+
+            with col2:
+                st.markdown(f"**Barrio:** {row.get('Barrio', 'No disponible')}")
+                st.markdown(f"**Localidad:** {row.get('Localidad', 'No disponible')}")
+                st.markdown(f"**Departamento:** {row.get('Departamento', 'No disponible')}")
+                st.markdown(f"**Mercado:** {row.get('Mercado', 'No disponible')}")

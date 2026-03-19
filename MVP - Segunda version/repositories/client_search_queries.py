@@ -4,6 +4,7 @@ from repositories.dashboard_queries import get_dimension_service_columns, get_di
 
 CLIENT_TABLE = "analiticaefg.clienteintegral.modelo_dimcliente"
 CLIENT_CONTRACTS_TABLE = "analiticaefg.clienteintegral.modelo_datosclienteresidencial"
+CLIENT_CONTRACTS_SUMMARY_TABLE = "analiticaefg.clienteintegral.modelo_contratosresidencial"
 UBICACION_TABLE = "analiticaefg.clienteintegral.modelo_dimubicacion"
 CONTRATO_TABLE = "dwhbiefg.comun.dimcontrato"
 
@@ -47,6 +48,17 @@ def get_cliente_contratos_raw_query(tipo_identificacion: str, identificacion: st
     return f"""
     SELECT *
     FROM {CLIENT_CONTRACTS_TABLE}
+    WHERE TipoIdentificacion = '{tipo_identificacion}'
+      AND Identificacion = '{identificacion}'
+    """
+
+
+def get_cliente_contratos_summary_query(tipo_identificacion: str, identificacion: str) -> str:
+    tipo_identificacion = escape_sql_value(tipo_identificacion)
+    identificacion = escape_sql_value(identificacion)
+    return f"""
+    SELECT TipoIdentificacion, Identificacion, contratos, ContratosActivos
+    FROM {CLIENT_CONTRACTS_SUMMARY_TABLE}
     WHERE TipoIdentificacion = '{tipo_identificacion}'
       AND Identificacion = '{identificacion}'
     """
