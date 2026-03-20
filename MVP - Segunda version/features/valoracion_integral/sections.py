@@ -45,25 +45,48 @@ def load_styles() -> None:
     st.markdown(
         """
         <style>
+        .dashboard-hero {
+            background: linear-gradient(135deg, #f8fbff 0%, #eef5ff 100%);
+            border: 1px solid #dbeafe;
+            border-radius: 18px;
+            padding: 1.2rem 1.35rem;
+            margin-bottom: 1rem;
+        }
+
         .dashboard-title {
-            font-size: 1.9rem;
-            font-weight: 700;
-            color: #1f3c88;
-            margin-bottom: 0.25rem;
+            font-size: 2.05rem;
+            font-weight: 800;
+            color: #0f3d75;
+            margin-bottom: 0.15rem;
         }
 
         .dashboard-subtitle {
             font-size: 1rem;
             color: #5e6e82;
-            margin-bottom: 1.5rem;
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 1.08rem;
+            font-weight: 700;
+            color: #0f3d75;
+            margin-bottom: 0.15rem;
+        }
+
+        .section-subtitle {
+            font-size: 0.92rem;
+            color: #64748b;
+            margin-bottom: 0.95rem;
+            line-height: 1.45;
         }
 
         div[data-testid="stForm"] {
             border: 1px solid #e7edf3;
             border-radius: 14px;
             padding: 14px 14px 6px 14px;
-            background: #ffffff;
+            background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
             margin-bottom: 1.2rem;
+            box-shadow: 0 1px 2px rgba(16, 24, 40, 0.03);
         }
 
         .kpi-card {
@@ -91,7 +114,7 @@ def load_styles() -> None:
 
         .kpi-icon {
             font-size: 1.1rem;
-            color: #0b74c8;
+            color: #0f3d75;
         }
 
         .kpi-value {
@@ -128,13 +151,26 @@ def load_styles() -> None:
 
 def render_header() -> None:
     st.markdown(
-        '<div class="dashboard-title">Valoración Integral del Cliente</div>',
+        """
+        <div class="dashboard-hero">
+            <div class="dashboard-title">Valoración Integral del Cliente</div>
+            <div class="dashboard-subtitle">
+                Vista ejecutiva del cliente, su presencia en servicios y sus principales patrones de valor.
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
-    # st.markdown(
-    #     '<div class="dashboard-subtitle">Resumen ejecutivo de clientes y contratos</div>',
-    #     unsafe_allow_html=True,
-    # )
+
+
+def _render_section_header(title: str, subtitle: str) -> None:
+    st.markdown(
+        f"""
+        <div class="section-title">{title}</div>
+        <div class="section-subtitle">{subtitle}</div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def render_kpi_card(title: str, value: str, icon: str) -> None:
@@ -179,28 +215,18 @@ def render_penetracion_section(df_penetracion: pd.DataFrame, df_num_servicios: p
 
     with col1:
         with st.container(border=True):
-            st.markdown(
-                """
-                <div style="font-size:1.05rem;font-weight:700;color:#334155;margin-bottom:0.2rem;">
-                    Clientes por servicio
-                </div>
-                """,
-                unsafe_allow_html=True,
+            _render_section_header(
+                "Clientes por servicio",
+                "Cantidad de clientes con presencia en cada servicio.",
             )
-            st.caption("Cantidad de clientes con presencia en cada servicio")
             render_penetracion_servicios_chart(df_penetracion)
 
     with col2:
         with st.container(border=True):
-            st.markdown(
-                """
-                <div style="font-size:1.05rem;font-weight:700;color:#334155;margin-bottom:0.2rem;">
-                    Número de servicios por cliente
-                </div>
-                """,
-                unsafe_allow_html=True,
+            _render_section_header(
+                "Número de servicios por cliente",
+                "Distribución de clientes según cantidad de servicios a los que ha accedido.",
             )
-            st.caption("Distribución de clientes según cantidad de servicios")
             render_numero_servicios_chart(df_num_servicios)
 
 
@@ -212,28 +238,18 @@ def render_nuevos_indicadores_section(
 
     with col1:
         with st.container(border=True):
-            st.markdown(
-                """
-                <div style="font-size:1.05rem;font-weight:700;color:#334155;margin-bottom:0.2rem;">
-                    Combinaciones más usuales de servicios
-                </div>
-                """,
-                unsafe_allow_html=True,
+            _render_section_header(
+                "Combinaciones más usuales de servicios",
+                "Ranking de las combinaciones de servicios más frecuentes en los clientes filtrados.",
             )
-            st.caption("Ranking de las combinaciones de servicios más frecuentes en los clientes filtrados")
             render_combinaciones_servicios_chart(df_combinaciones)
 
     with col2:
         with st.container(border=True):
-            st.markdown(
-                """
-                <div style="font-size:1.05rem;font-weight:700;color:#334155;margin-bottom:0.2rem;">
-                    Clientes con mayor aporte
-                </div>
-                """,
-                unsafe_allow_html=True,
+            _render_section_header(
+                "Clientes con mayor aporte",
+                "Clientes con mayor aporte total y servicios activos asociados.",
             )
-            st.caption("Clientes con mayor aporte total y servicios activos asociados")
             render_clientes_mayor_aporte_chart(df_aporte)
 
 
@@ -286,13 +302,9 @@ def render_service_classification_section(filters: DashboardFilters) -> None:
         ]
 
     with st.container(border=True):
-        st.markdown(
-            """
-            <div style="font-size:1.2rem;font-weight:700;color:#1f3c88;margin:0 0 0.8rem 0;">
-                CLASIFICACIÓN POR SERVICIO
-            </div>
-            """,
-            unsafe_allow_html=True,
+        _render_section_header(
+            "Clasificación por servicio",
+            "Distribución y perfil promedio de clasificación para cada servicio disponible.",
         )
 
         for service_tab, (servicio, servicio_label) in zip(st.tabs([label for _, label in servicios]), servicios):
@@ -309,15 +321,10 @@ def render_service_classification_section(filters: DashboardFilters) -> None:
 
                 with col1:
                     with st.container(border=True):
-                        st.markdown(
-                            f"""
-                            <div style="font-size:1.05rem;font-weight:700;color:#334155;margin-bottom:0.2rem;">
-                                Distribución - <span style="color:#0B74C8;">{servicio_label}</span>
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
+                        _render_section_header(
+                            f"Distribución - {servicio_label}",
+                            "Clasificación RFM de los clientes filtrados dentro del servicio.",
                         )
-                        st.caption("Clasificación RFM de los clientes filtrados dentro del servicio")
                         summary_col, _ = st.columns([0.52, 0.48], gap="medium")
                         with summary_col:
                             st.markdown(
@@ -333,15 +340,10 @@ def render_service_classification_section(filters: DashboardFilters) -> None:
 
                 with col2:
                     with st.container(border=True):
-                        st.markdown(
-                            f"""
-                            <div style="font-size:1.05rem;font-weight:700;color:#334155;margin-bottom:0.2rem;">
-                                Perfil promedio - <span style="color:#0B74C8;">{servicio_label}</span>
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
+                        _render_section_header(
+                            f"Perfil promedio - {servicio_label}",
+                            "Promedio de las dimensiones de los clientes en este servicio.",
                         )
-                        st.caption("Promedio de las dimensiones de los clientes en este servicio")
                         _render_service_profile_average(df_profile)
 
 
@@ -577,7 +579,10 @@ def render_consolidado_section(
 
     with col1:
         with st.container(border=True, height=CONSOLIDADO_SECTION_HEIGHT):
-            st.markdown("### Consolidado General")
+            _render_section_header(
+                "Consolidado general",
+                "Vista consolidada de los clientes filtrados con foco en señales de valor y presencia en servicios.",
+            )
 
             if df_consolidado_fmt.empty:
                 st.info("No hay información consolidada para los filtros seleccionados.")
@@ -599,7 +604,10 @@ def render_consolidado_section(
 
     with col2:
         with st.container(border=True, height=CONSOLIDADO_SECTION_HEIGHT):
-            st.markdown("### Detalle por Servicio")
+            _render_section_header(
+                "Detalle por servicio",
+                "Explora dimensiones, indicadores y variables por servicio para los clientes filtrados.",
+            )
 
             if categoria == "Residencial":
                 servicios = [

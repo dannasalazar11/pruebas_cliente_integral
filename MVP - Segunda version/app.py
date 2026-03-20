@@ -1,9 +1,9 @@
 ﻿from dotenv import load_dotenv
 import streamlit as st
 
-from components.layout import render_footer, render_header
-from components.styles import load_base_css
-from core.navigation import PageDefinition, render_navigation
+from components.layout_shell import render_footer, render_header
+from components.styles_shell import load_base_css
+from core.navigation_shell import PageDefinition, render_navigation
 from core.session import NAVIGATION_KEY, reset_app_state
 from views.buscador_clientes import render as render_buscador_clientes
 from views.decisiones_estrategicas import render as render_decisiones_estrategicas
@@ -61,7 +61,7 @@ def main() -> None:
         reset_app_state(preserve_keys={NAVIGATION_KEY, "_previous_active_page"})
     st.session_state["_previous_active_page"] = active_page.page_id
 
-    st.markdown("---")
+    st.markdown('<div class="app-shell-content-divider"></div>', unsafe_allow_html=True)
 
     with st.container():
         active_page.render()
