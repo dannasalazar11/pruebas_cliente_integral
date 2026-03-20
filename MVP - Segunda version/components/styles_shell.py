@@ -5,52 +5,55 @@ def load_base_css() -> None:
     css = """
     <style>
     .block-container {
-        padding-top: 0.65rem;
+        padding-top: 0.5rem;
         padding-bottom: 0;
     }
 
     div.stButton > button {
-        border-radius: 14px;
+        border-radius: 16px;
         font-weight: 600;
-        height: 3.35rem;
-        border: 1px solid #e2e8f0;
+        height: 3.55rem;
+        border: 1px solid #d9e4f1;
         transition: all 0.24s ease;
-        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
     }
 
     div.stButton > button[kind="secondary"] {
         background: #ffffff;
-        color: #1e293b;
-        border-color: #dbe5f0;
+        color: #24364d;
+        border-color: #d9e4f1;
     }
 
     div.stButton > button[kind="secondary"]:hover {
         background: #f8fbff;
         color: #0f3d75;
         border-color: #bfd5ee;
+        transform: translateY(-1px);
     }
 
     div.stButton > button[kind="primary"] {
         background: linear-gradient(135deg, #0f3d75 0%, #1d4f91 100%);
         color: #ffffff;
         border-color: #0f3d75;
+        box-shadow: 0 8px 18px rgba(15, 61, 117, 0.14);
     }
 
     div.stButton > button[kind="primary"]:hover {
         background: linear-gradient(135deg, #0d3565 0%, #184781 100%);
         color: #ffffff;
         border-color: #0d3565;
+        transform: translateY(-1px);
     }
 
     .app-shell-hero {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        gap: 1.5rem;
-        padding: 1.15rem 1.35rem;
-        margin-bottom: 1rem;
+        justify-content: flex-start;
+        gap: 1.2rem;
+        padding: 1.1rem 1.3rem;
+        margin-bottom: 0.85rem;
         border: 1px solid #dbeafe;
-        border-radius: 20px;
+        border-radius: 22px;
         background: linear-gradient(135deg, #f8fbff 0%, #eef5ff 100%);
     }
 
@@ -98,41 +101,15 @@ def load_base_css() -> None:
     .app-shell-header-copy p {
         margin: 0.45rem 0 0 0;
         color: #64748b;
-        font-size: 1.12rem;
+        font-size: 1.08rem;
         font-weight: 400;
-        max-width: 900px;
+        max-width: 960px;
         line-height: 1.5;
     }
 
-    .app-shell-status-wrap {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 0.4rem;
-        flex: 0 0 auto;
-    }
-
-    .app-shell-status-label {
-        text-align: right;
-        color: #94a3b8;
-        font-size: 0.78rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        font-weight: 700;
-    }
-
-    .app-shell-status-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0.5rem 0.8rem;
-        border-radius: 999px;
-        border: 1px solid #cbdaf0;
-        background: #ffffff;
-        color: #0f3d75;
-        font-size: 0.96rem;
-        font-weight: 700;
-        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    .app-shell-nav-panel {
+        padding: 0.1rem 0 0.15rem 0;
+        margin-bottom: 0.3rem;
     }
 
     .app-shell-nav-head {
@@ -140,7 +117,7 @@ def load_base_css() -> None:
         align-items: center;
         justify-content: space-between;
         gap: 1rem;
-        margin-bottom: 0.7rem;
+        margin-bottom: 0.65rem;
     }
 
     .app-shell-nav-copy {
@@ -163,13 +140,13 @@ def load_base_css() -> None:
     .app-shell-nav-rule {
         height: 1px;
         background: linear-gradient(90deg, #dbe5f0 0%, #e8eef5 100%);
-        margin: 1rem 0 1.1rem 0;
+        margin: 0.9rem 0 0.7rem 0;
     }
 
     .app-shell-content-divider {
         height: 1px;
         background: linear-gradient(90deg, #dbe5f0 0%, #e8eef5 100%);
-        margin: 0.85rem 0 1.1rem 0;
+        margin: 0 0 1.15rem 0;
     }
 
     .app-shell-footer {
@@ -322,10 +299,6 @@ def load_base_css() -> None:
     @media (max-width: 1100px) {
         .app-shell-hero {
             flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .app-shell-status-wrap {
             align-items: flex-start;
         }
 

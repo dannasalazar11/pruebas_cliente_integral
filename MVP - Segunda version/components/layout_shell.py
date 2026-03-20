@@ -36,10 +36,6 @@ def render_header() -> None:
                     </p>
                 </div>
             </div>
-            <div class="app-shell-status-wrap">
-                <div class="app-shell-status-label">Estado de plataforma</div>
-                <div class="app-shell-status-badge">V 2.0 | Conectado</div>
-            </div>
         </div>
         """,
         unsafe_allow_html=True,

@@ -21,10 +21,12 @@ def render_navigation(
 
     st.markdown(
         """
-        <div class="app-shell-nav-head">
-            <div class="app-shell-nav-copy">
-                <div class="app-shell-nav-title">Explora la plataforma</div>
-                <div class="app-shell-nav-subtitle">Selecciona el módulo de trabajo que quieres consultar.</div>
+        <div class="app-shell-nav-panel">
+            <div class="app-shell-nav-head">
+                <div class="app-shell-nav-copy">
+                    <div class="app-shell-nav-title">Explora la plataforma</div>
+                    <div class="app-shell-nav-subtitle">Selecciona el módulo de trabajo que quieres consultar.</div>
+                </div>
             </div>
         </div>
         """,
@@ -46,5 +48,4 @@ def render_navigation(
                 st.session_state[session_key] = page.page_id
                 st.rerun()
 
-    st.markdown('<div class="app-shell-nav-rule"></div>', unsafe_allow_html=True)
     return next(page for page in pages if page.page_id == st.session_state[session_key])
