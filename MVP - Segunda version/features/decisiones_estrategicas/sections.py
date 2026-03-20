@@ -44,6 +44,76 @@ def load_styles() -> None:
             font-weight: 800;
             color: #0f172a;
         }
+        .de-intro-box {
+            border: 1px solid #e2e8f0;
+            border-radius: 18px;
+            padding: 1.05rem 1.1rem;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            margin-bottom: 0.35rem;
+        }
+        .de-intro-badge {
+            display: inline-block;
+            font-size: 0.74rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 0.28rem 0.55rem;
+            border-radius: 999px;
+            margin-bottom: 0.7rem;
+            color: white;
+        }
+        .de-intro-copy {
+            color: #334155;
+            font-size: 1rem;
+            line-height: 1.6;
+            margin: 0;
+        }
+        .de-step-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 0.95rem 1rem;
+            background: white;
+            min-height: 88px;
+            margin-bottom: 0.75rem;
+        }
+        .de-step-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 999px;
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.92rem;
+            font-weight: 800;
+            margin-bottom: 0.7rem;
+        }
+        .de-step-copy {
+            color: #334155;
+            font-size: 1rem;
+            line-height: 1.5;
+            margin: 0;
+        }
+        .de-interpret-box {
+            border-radius: 18px;
+            padding: 1rem 1.1rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+        .de-interpret-title {
+            font-size: 0.84rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #64748b;
+            margin-bottom: 0.55rem;
+            font-weight: 700;
+        }
+        .de-interpret-copy {
+            color: #334155;
+            font-size: 1rem;
+            line-height: 1.65;
+            margin: 0;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -63,6 +133,53 @@ def render_header() -> None:
         """,
         unsafe_allow_html=True,
     )
+
+
+def _render_intro_tabs(
+    accent_color: str,
+    purpose: str,
+    steps: list[str],
+    interpretation: str,
+) -> None:
+    tab_guia, tab_pasos, tab_orden = st.tabs(
+        ["¿Para qué sirve?", "¿Cómo funciona?", "Interpretación"]
+    )
+
+    with tab_guia:
+        st.markdown(
+            f"""
+            <div class="de-intro-box">
+                <div class="de-intro-badge" style="background:{accent_color};">Visión general</div>
+                <p class="de-intro-copy">{purpose}</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with tab_pasos:
+        columns = st.columns(2)
+        for index, step in enumerate(steps, start=1):
+            with columns[(index - 1) % 2]:
+                st.markdown(
+                    f"""
+                    <div class="de-step-card">
+                        <div class="de-step-number" style="background:{accent_color};">{index}</div>
+                        <p class="de-step-copy">{step}</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+    with tab_orden:
+        st.markdown(
+            f"""
+            <div class="de-interpret-box">
+                <div class="de-interpret-title">Cómo leer el resultado</div>
+                <p class="de-interpret-copy">{interpretation}</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 def render_consolidar_intro() -> None:
@@ -583,3 +700,83 @@ def render_placeholder_strategy(title: str, description: str) -> None:
     with st.container(border=True):
         st.subheader(title)
         st.info(description)
+
+
+def render_consolidar_intro() -> None:
+    _render_intro_tabs(
+        accent_color="#c2410c",
+        purpose=(
+            "Identifica clientes estables, confiables y valiosos. La idea es proteger esa relación "
+            "y priorizar acciones de consolidación donde el cliente ya muestra fortaleza."
+        ),
+        steps=[
+            "Selecciona la categoría del cliente.",
+            "Escoge los servicios donde quieres medir estabilidad.",
+            "Define cuántos clientes quieres extraer.",
+            "Ejecuta el análisis y descarga el listado priorizado.",
+        ],
+        interpretation=(
+            "El Score_CON pondera fidelidad relacional, valor económico recurrente y madurez, "
+            "quedándose con el score más restrictivo cuando se evalúan varios servicios."
+        ),
+    )
+
+
+def render_recuperar_intro() -> None:
+    _render_intro_tabs(
+        accent_color="#b91c1c",
+        purpose=(
+            "Identifica clientes con señales de deterioro en la relación con la empresa y los prioriza "
+            "según su valor histórico y la viabilidad de una recuperación."
+        ),
+        steps=[
+            "Elige la categoría del cliente.",
+            "Selecciona el servicio en riesgo.",
+            "Define cuántos clientes quieres priorizar.",
+            "Ejecuta el análisis para obtener el listado de recuperación.",
+        ],
+        interpretation=(
+            "El Score_REC pondera deterioro, valor histórico y viabilidad, priorizando clientes "
+            "que vale la pena recuperar antes de que la relación siga cayendo."
+        ),
+    )
+
+
+def render_fidelizar_intro() -> None:
+    _render_intro_tabs(
+        accent_color="#1d4ed8",
+        purpose=(
+            "Identifica clientes que conviene fidelizar usando un servicio ancla fuerte y un servicio objetivo "
+            "donde todavía existe una oportunidad clara de crecimiento."
+        ),
+        steps=[
+            "Elige la categoría del cliente.",
+            "Selecciona el servicio ancla.",
+            "Escoge el servicio objetivo a potenciar.",
+            "Ejecuta el análisis para obtener el listado priorizado.",
+        ],
+        interpretation=(
+            "El Score_FID combina la fortaleza del servicio ancla, la oportunidad del servicio objetivo "
+            "y la estabilidad general del cliente."
+        ),
+    )
+
+
+def render_potenciar_intro() -> None:
+    _render_intro_tabs(
+        accent_color="#059669",
+        purpose=(
+            "Identifica clientes con alto potencial de crecimiento en uno o varios servicios para enfocar "
+            "acciones comerciales donde la probabilidad de expansión es mayor."
+        ),
+        steps=[
+            "Selecciona la categoría del cliente.",
+            "Escoge los servicios objetivo a potenciar.",
+            "Define cuántos clientes quieres priorizar.",
+            "Ejecuta el análisis para obtener el listado comercial.",
+        ],
+        interpretation=(
+            "El Score_POT refleja el potencial de crecimiento promedio entre los servicios elegidos, "
+            "ponderando potencial, valor económico, relación y cumplimiento."
+        ),
+    )

@@ -341,7 +341,7 @@ def render_service_classification_section(filters: DashboardFilters) -> None:
                             """,
                             unsafe_allow_html=True,
                         )
-                        st.caption("Promedio de dimensiones para los clientes clasificados en este servicio")
+                        st.caption("Promedio de las dimensiones de los clientes en este servicio")
                         _render_service_profile_average(df_profile)
 
 
