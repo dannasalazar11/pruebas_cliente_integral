@@ -28,7 +28,7 @@ DIMENSION_SERVICE_COLUMNS = {
     "Comercial": [
         ("consumo", "Consumo"),
         ("rtr", "RTR"),
-        ("efisoluciones", "EfiSoluciones"),
+        ("efisoluciones", "Efisoluciones"),
         ("brilla", "Brilla"),
     ],
 }
@@ -495,6 +495,11 @@ def get_consolidado_general_query(
     extra_service = config["servicio_extra_col"]
     limit_clause = build_limit_clause(limit)
 
+    if categoria == "Residencial":
+        extra = "dim.SAD, dim.Seguros"
+    else: 
+        extra = "dim.Efisoluciones"
+
     return f"""
     WITH 
         clientes_filtrados as (
@@ -503,7 +508,16 @@ def get_consolidado_general_query(
         {where_clause})
 
     SELECT 
-        dim.*
+        dim.TipoIdentificacion,
+        dim.Identificacion,
+        dim.Consumo,
+        dim.RTR,
+        dim.Brilla,
+        {extra},
+        dim.Economica,
+        dim.Cumplimiento,
+        dim.Relacional,
+        dim.Potencial
     FROM {dimension_table} dim
     INNER JOIN clientes_filtrados c
         on dim.tipoidentificacion=c.tipoidentificacion
@@ -515,6 +529,15 @@ SERVICIOS_RESIDENCIAL = ["consumo", "rtr", "sad", "seguros", "brilla"]
 SERVICIOS_COMERCIAL = ["consumo", "rtr", "efisoluciones", "brilla"]
 
 TIPOS_DETALLE = ["dimensiones", "indicadores", "variables"]
+
+SERVICE_CLASSIFICATION_TABLES = {
+    "Residencial": {
+        "brilla": "analiticaefg.clienteintegral.brilla_residencial_consolidado_dimensiones",
+    },
+    "Comercial": {
+        "brilla": "analiticaefg.clienteintegral.brilla_comercial_consolidado_dimensiones",
+    },
+}
 
 
 def get_detalle_servicio_query(
@@ -568,4 +591,84 @@ def get_detalle_servicio_query(
         ON detalle.TipoIdentificacion = clientes.TipoIdentificacion
        AND detalle.Identificacion = clientes.Identificacion
     {limit_clause}
+    """
+
+
+def get_service_classification_query(
+    categoria: str,
+    servicio: str,
+    departamentos=None,
+    localidades=None,
+    barrios=None,
+    mercados=None,
+) -> str:
+    service_table = SERVICE_CLASSIFICATION_TABLES.get(categoria, {}).get(servicio.lower())
+    if not service_table:
+        raise ValueError(f"No hay clasificación disponible para {servicio} en {categoria}.")
+
+    config = get_source_config(categoria)
+    where_clause = build_filters_where(
+        departamentos=departamentos,
+        localidades=localidades,
+        barrios=barrios,
+        mercados=mercados,
+    )
+
+    return f"""
+    WITH clientes_filtrados AS (
+        SELECT DISTINCT
+            TipoIdentificacion,
+            Identificacion
+        FROM {config['clientes']}
+        {where_clause}
+    )
+    SELECT
+        COALESCE(det.ClasificacionRFM, 'Sin clasificación') AS ClasificacionRFM,
+        COUNT(*) AS clientes
+    FROM {service_table} det
+    INNER JOIN clientes_filtrados clientes
+        ON det.TipoIdentificacion = clientes.TipoIdentificacion
+       AND det.Identificacion = clientes.Identificacion
+    GROUP BY COALESCE(det.ClasificacionRFM, 'Sin clasificación')
+    ORDER BY clientes DESC, ClasificacionRFM
+    """
+
+
+def get_service_classification_profile_query(
+    categoria: str,
+    servicio: str,
+    departamentos=None,
+    localidades=None,
+    barrios=None,
+    mercados=None,
+) -> str:
+    service_table = SERVICE_CLASSIFICATION_TABLES.get(categoria, {}).get(servicio.lower())
+    if not service_table:
+        raise ValueError(f"No hay clasificación disponible para {servicio} en {categoria}.")
+
+    config = get_source_config(categoria)
+    where_clause = build_filters_where(
+        departamentos=departamentos,
+        localidades=localidades,
+        barrios=barrios,
+        mercados=mercados,
+    )
+
+    return f"""
+    WITH clientes_filtrados AS (
+        SELECT DISTINCT
+            TipoIdentificacion,
+            Identificacion
+        FROM {config['clientes']}
+        {where_clause}
+    )
+    SELECT
+        AVG(COALESCE(det.Economica, 0)) AS Economica,
+        AVG(COALESCE(det.Cumplimiento, 0)) AS Cumplimiento,
+        AVG(COALESCE(det.Relacional, 0)) AS Relacional,
+        AVG(COALESCE(det.Potencial, 0)) AS Potencial
+    FROM {service_table} det
+    INNER JOIN clientes_filtrados clientes
+        ON det.TipoIdentificacion = clientes.TipoIdentificacion
+       AND det.Identificacion = clientes.Identificacion
     """

@@ -15,6 +15,7 @@ from features.valoracion_integral.sections import (
     render_consolidado_section,
     render_header,
     render_kpis,
+    render_service_classification_section,
     render_nuevos_indicadores_section,
     render_penetracion_section,
 )
@@ -49,6 +50,8 @@ def render() -> None:
     df_combinaciones = load_combinaciones_servicios(filters)
     df_aporte = load_clientes_mayor_aporte(filters)
     render_nuevos_indicadores_section(df_combinaciones, df_aporte)
+
+    render_service_classification_section(filters)
 
     df_consolidado = load_consolidado_general(filters)
     render_consolidado_section(df_consolidado, filters)

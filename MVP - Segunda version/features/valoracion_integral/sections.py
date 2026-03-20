@@ -9,8 +9,15 @@ from features.valoracion_integral.charts import (
     render_combinaciones_servicios_chart,
     render_numero_servicios_chart,
     render_penetracion_servicios_chart,
+    render_service_classification_chart,
 )
-from features.valoracion_integral.data import TABLE_PREVIEW_LIMIT, load_consolidado_general, load_detalle_servicio
+from features.valoracion_integral.data import (
+    TABLE_PREVIEW_LIMIT,
+    load_consolidado_general,
+    load_detalle_servicio,
+    load_service_classification,
+    load_service_classification_profile,
+)
 from features.valoracion_integral.formatters import format_millions, format_number
 from features.valoracion_integral.models import DashboardFilters
 
@@ -26,7 +33,7 @@ CONSOLIDADO_SERVICE_LABELS = {
     "Comercial": {
         "consumo": "Consumo",
         "rtr": "RTR",
-        "efisoluciones": "EfiSoluciones",
+        "efisoluciones": "Efisoluciones",
         "brilla": "Brilla",
     },
 }
@@ -260,6 +267,150 @@ def render_clasificacion_section(df_distribution: pd.DataFrame, df_temporal: pd.
             render_clasificacion_temporal_chart(df_temporal)
 
 
+def render_service_classification_section(filters: DashboardFilters) -> None:
+    categoria = filters.categoria
+    if categoria == "Residencial":
+        servicios = [
+            ("consumo", "Consumo"),
+            ("rtr", "RTR"),
+            ("sad", "SAD"),
+            ("brilla", "Brilla"),
+            ("seguros", "Seguros"),
+        ]
+    else:
+        servicios = [
+            ("consumo", "Consumo"),
+            ("rtr", "RTR"),
+            ("efisoluciones", "Efisoluciones"),
+            ("brilla", "Brilla"),
+        ]
+
+    with st.container(border=True):
+        st.markdown(
+            """
+            <div style="font-size:1.2rem;font-weight:700;color:#1f3c88;margin:0 0 0.8rem 0;">
+                CLASIFICACIÓN POR SERVICIO
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        for service_tab, (servicio, servicio_label) in zip(st.tabs([label for _, label in servicios]), servicios):
+            with service_tab:
+                if servicio != "brilla":
+                    st.info(f"Aún no hay clasificación disponible para {servicio_label}.")
+                    continue
+
+                df_clasificacion = load_service_classification(filters, servicio)
+                total_clientes = int(df_clasificacion["clientes"].sum()) if not df_clasificacion.empty else 0
+                df_profile = load_service_classification_profile(filters, servicio)
+
+                col1, col2 = st.columns([1.55, 1], gap="large")
+
+                with col1:
+                    with st.container(border=True):
+                        st.markdown(
+                            f"""
+                            <div style="font-size:1.05rem;font-weight:700;color:#334155;margin-bottom:0.2rem;">
+                                Distribución - <span style="color:#0B74C8;">{servicio_label}</span>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                        st.caption("Clasificación RFM de los clientes filtrados dentro del servicio")
+                        summary_col, _ = st.columns([0.52, 0.48], gap="medium")
+                        with summary_col:
+                            st.markdown(
+                                f"""
+                                <div class="search-summary-card" style="margin-bottom:0.5rem;">
+                                    <div class="search-summary-label">Total clientes del servicio</div>
+                                    <div class="search-summary-value" style="font-size:1.9rem;">{format_millions(total_clientes)}</div>
+                                </div>
+                                """,
+                                unsafe_allow_html=True,
+                            )
+                        render_service_classification_chart(df_clasificacion)
+
+                with col2:
+                    with st.container(border=True):
+                        st.markdown(
+                            f"""
+                            <div style="font-size:1.05rem;font-weight:700;color:#334155;margin-bottom:0.2rem;">
+                                Perfil promedio - <span style="color:#0B74C8;">{servicio_label}</span>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                        st.caption("Promedio de dimensiones para los clientes clasificados en este servicio")
+                        _render_service_profile_average(df_profile)
+
+
+def _render_summary_metric_card(title: str, value: object) -> None:
+    st.markdown(
+        f"""
+        <div style="border:1px solid #e7edf3;border-radius:14px;padding:16px 18px;background:#ffffff;margin-bottom:0.85rem;">
+            <div style="font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:#7a869a;margin-bottom:0.3rem;">
+                {title}
+            </div>
+            <div style="font-size:1.55rem;font-weight:700;color:#0f172a;">
+                {value}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_profile_progress_row(label: str, value: float, color: str, icon: str) -> None:
+    percentage = max(0.0, min(100.0, value * 100.0))
+    st.markdown(
+        f"""
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:0.55rem 0 0.25rem 0;">
+            <div style="font-size:0.98rem;font-weight:600;color:#334155;">{icon} {label}</div>
+            <div style="font-size:0.98rem;font-weight:700;color:#0f172a;">{percentage:.0f}</div>
+        </div>
+        <div style="width:100%;height:10px;border-radius:999px;background:#e5e7eb;overflow:hidden;margin-bottom:0.85rem;">
+            <div style="width:{percentage:.1f}%;height:100%;border-radius:999px;background:{color};"></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_service_profile_average(df_profile: pd.DataFrame) -> None:
+    if df_profile.empty:
+        st.info("No hay perfil promedio disponible para este servicio.")
+        return
+
+    row = df_profile.iloc[0].fillna(0)
+    score_promedio = (
+        float(row.get("Economica", 0))
+        + float(row.get("Cumplimiento", 0))
+        + float(row.get("Relacional", 0))
+        + float(row.get("Potencial", 0))
+    ) / 4.0
+
+    st.markdown(
+        f"""
+        <div style="border:1px solid #dbeafe;border-radius:16px;padding:16px 18px;background:linear-gradient(90deg,#eef5ff 0%,#ffffff 100%);margin-bottom:1rem;">
+            <div style="display:flex;align-items:center;gap:14px;">
+                <div style="width:68px;height:68px;border-radius:50%;background:#2563eb;color:#ffffff;display:flex;align-items:center;justify-content:center;font-size:1.7rem;font-weight:700;">◔</div>
+                <div>
+                    <div style="font-size:0.98rem;color:#475467;margin-bottom:0.2rem;">Score promedio</div>
+                    <div style="font-size:2.15rem;font-weight:800;color:#0f172a;line-height:1;">{score_promedio * 100:.0f}<span style="font-size:1.1rem;color:#64748b;font-weight:700;">/100</span></div>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    _render_profile_progress_row("Económica", float(row.get("Economica", 0)), "#16a34a", "💲")
+    _render_profile_progress_row("Cumplimiento", float(row.get("Cumplimiento", 0)), "#2563eb", "✅")
+    _render_profile_progress_row("Relacional", float(row.get("Relacional", 0)), "#9333ea", "👥")
+    _render_profile_progress_row("Potencial", float(row.get("Potencial", 0)), "#f97316", "🎯")
+
+
 def _normalize_column_name(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", value)
     return "".join(char for char in normalized if not unicodedata.combining(char)).lower()
@@ -462,7 +613,7 @@ def render_consolidado_section(
                 servicios = [
                     ("consumo", "Consumo"),
                     ("rtr", "RTR"),
-                    ("efisoluciones", "EfiSoluciones"),
+                    ("efisoluciones", "Efisoluciones"),
                     ("brilla", "Brilla"),
                 ]
             tipos = [

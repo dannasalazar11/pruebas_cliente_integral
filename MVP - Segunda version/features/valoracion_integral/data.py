@@ -14,6 +14,8 @@ from repositories.dashboard_queries import (
     get_kpis_query,
     get_numero_servicios_query,
     get_penetracion_servicios_query,
+    get_service_classification_query,
+    get_service_classification_profile_query,
 )
 from services.databricks_conn import run_query
 
@@ -100,5 +102,33 @@ def load_detalle_servicio(
             barrios=list(filters.barrios),
             mercados=list(filters.mercados),
             limit=limit,
+        )
+    )
+
+
+@st.cache_data(ttl=300)
+def load_service_classification(filters: DashboardFilters, servicio: str) -> pd.DataFrame:
+    return run_query(
+        get_service_classification_query(
+            categoria=filters.categoria,
+            servicio=servicio,
+            departamentos=list(filters.departamentos),
+            localidades=list(filters.localidades),
+            barrios=list(filters.barrios),
+            mercados=list(filters.mercados),
+        )
+    )
+
+
+@st.cache_data(ttl=300)
+def load_service_classification_profile(filters: DashboardFilters, servicio: str) -> pd.DataFrame:
+    return run_query(
+        get_service_classification_profile_query(
+            categoria=filters.categoria,
+            servicio=servicio,
+            departamentos=list(filters.departamentos),
+            localidades=list(filters.localidades),
+            barrios=list(filters.barrios),
+            mercados=list(filters.mercados),
         )
     )

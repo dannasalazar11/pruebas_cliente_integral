@@ -3,8 +3,14 @@ from typing import Iterable
 from repositories.dashboard_queries import get_dimension_service_columns, get_dimension_table
 
 CLIENT_TABLE = "analiticaefg.clienteintegral.modelo_dimcliente"
-CLIENT_CONTRACTS_TABLE = "analiticaefg.clienteintegral.modelo_datosclienteresidencial"
-CLIENT_CONTRACTS_SUMMARY_TABLE = "analiticaefg.clienteintegral.modelo_contratosresidencial"
+CLIENT_CONTRACTS_TABLES = {
+    "Residencial": "analiticaefg.clienteintegral.modelo_contratosresidencial",
+    "Comercial": "analiticaefg.clienteintegral.modelo_contratoscomercial",
+}
+CLIENT_CONTRACTS_SUMMARY_TABLES = {
+    "Residencial": "analiticaefg.clienteintegral.modelo_contratosresidencial",
+    "Comercial": "analiticaefg.clienteintegral.modelo_contratoscomercial",
+}
 UBICACION_TABLE = "analiticaefg.clienteintegral.modelo_dimubicacion"
 CONTRATO_TABLE = "dwhbiefg.comun.dimcontrato"
 
@@ -21,7 +27,7 @@ def escape_sql_value(value: str) -> str:
 def get_tipo_identificacion_options_query() -> str:
     return f"""
     SELECT DISTINCT TipoIdentificacion
-    FROM {CLIENT_CONTRACTS_TABLE}
+    FROM {CLIENT_CONTRACTS_TABLES['Residencial']}
     WHERE TipoIdentificacion IS NOT NULL
     ORDER BY TipoIdentificacion
     """
@@ -42,23 +48,29 @@ def get_cliente_raw_query(tipo_identificacion: str, identificacion: str) -> str:
     """
 
 
-def get_cliente_contratos_raw_query(tipo_identificacion: str, identificacion: str) -> str:
+def get_cliente_contratos_raw_query(tipo_identificacion: str, identificacion: str, universo: str) -> str:
+    if universo not in CLIENT_CONTRACTS_TABLES:
+        raise ValueError(f"Universo no válido: {universo}")
     tipo_identificacion = escape_sql_value(tipo_identificacion)
     identificacion = escape_sql_value(identificacion)
+    contracts_table = CLIENT_CONTRACTS_TABLES[universo]
     return f"""
     SELECT *
-    FROM {CLIENT_CONTRACTS_TABLE}
+    FROM {contracts_table}
     WHERE TipoIdentificacion = '{tipo_identificacion}'
       AND Identificacion = '{identificacion}'
     """
 
 
-def get_cliente_contratos_summary_query(tipo_identificacion: str, identificacion: str) -> str:
+def get_cliente_contratos_summary_query(tipo_identificacion: str, identificacion: str, universo: str) -> str:
+    if universo not in CLIENT_CONTRACTS_SUMMARY_TABLES:
+        raise ValueError(f"Universo no válido: {universo}")
     tipo_identificacion = escape_sql_value(tipo_identificacion)
     identificacion = escape_sql_value(identificacion)
+    summary_table = CLIENT_CONTRACTS_SUMMARY_TABLES[universo]
     return f"""
     SELECT TipoIdentificacion, Identificacion, contratos, ContratosActivos
-    FROM {CLIENT_CONTRACTS_SUMMARY_TABLE}
+    FROM {summary_table}
     WHERE TipoIdentificacion = '{tipo_identificacion}'
       AND Identificacion = '{identificacion}'
     """

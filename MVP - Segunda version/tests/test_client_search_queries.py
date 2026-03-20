@@ -14,7 +14,7 @@ from repositories.client_search_queries import (
 class ClientSearchQueriesTestCase(unittest.TestCase):
     def test_tipo_identificacion_options_query_uses_contracts_table(self) -> None:
         query = get_tipo_identificacion_options_query()
-        self.assertIn("modelo_datosclienteresidencial", query)
+        self.assertIn("modelo_contratosresidencial", query)
         self.assertIn("SELECT DISTINCT TipoIdentificacion", query)
 
     def test_cliente_raw_query_deduplicates_person_records(self) -> None:
@@ -25,17 +25,23 @@ class ClientSearchQueriesTestCase(unittest.TestCase):
         self.assertIn("Identificacion = '123'", query)
 
     def test_cliente_contratos_raw_query_filters_person(self) -> None:
-        query = get_cliente_contratos_raw_query("CC", "123")
-        self.assertIn("modelo_datosclienteresidencial", query)
+        query = get_cliente_contratos_raw_query("CC", "123", "Residencial")
+        self.assertIn("modelo_contratosresidencial", query)
         self.assertIn("TipoIdentificacion = 'CC'", query)
         self.assertIn("Identificacion = '123'", query)
 
     def test_cliente_contratos_summary_query_uses_summary_table(self) -> None:
-        query = get_cliente_contratos_summary_query("CC", "123")
+        query = get_cliente_contratos_summary_query("CC", "123", "Residencial")
         self.assertIn("modelo_contratosresidencial", query)
         self.assertIn("ContratosActivos", query)
         self.assertIn("TipoIdentificacion = 'CC'", query)
         self.assertIn("Identificacion = '123'", query)
+
+    def test_cliente_contratos_queries_use_commercial_table_for_comercial(self) -> None:
+        raw_query = get_cliente_contratos_raw_query("CC", "123", "Comercial")
+        summary_query = get_cliente_contratos_summary_query("CC", "123", "Comercial")
+        self.assertIn("modelo_contratoscomercial", raw_query)
+        self.assertIn("modelo_contratoscomercial", summary_query)
 
     def test_contratos_detalle_query_filters_by_category_and_contracts(self) -> None:
         query = get_contratos_detalle_query(["1001", "1002"], "Comercial")

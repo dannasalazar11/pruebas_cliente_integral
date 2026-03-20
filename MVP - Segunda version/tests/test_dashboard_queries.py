@@ -13,6 +13,8 @@ from repositories.dashboard_queries import (
     get_kpis_query,
     get_numero_servicios_query,
     get_penetracion_servicios_query,
+    get_service_classification_query,
+    get_service_classification_profile_query,
     get_source_config,
     map_ui_markets_to_db_values,
 )
@@ -139,6 +141,20 @@ class DashboardQueriesTestCase(unittest.TestCase):
         self.assertIn("SUM(COALESCE(ganancia_total, 0))", query)
         self.assertIn("ServiciosActivos", query)
         self.assertIn("LIMIT 5", query)
+
+    def test_service_classification_query_uses_brilla_dimension_table(self) -> None:
+        query = get_service_classification_query("Residencial", "brilla")
+        self.assertIn("brilla_residencial_consolidado_dimensiones", query)
+        self.assertIn("ClasificacionRFM", query)
+        self.assertIn("modelo_datosclienteresidencial", query)
+
+    def test_service_classification_profile_query_averages_dimension_columns(self) -> None:
+        query = get_service_classification_profile_query("Comercial", "brilla")
+        self.assertIn("AVG(COALESCE(det.Economica, 0))", query)
+        self.assertIn("AVG(COALESCE(det.Cumplimiento, 0))", query)
+        self.assertIn("AVG(COALESCE(det.Relacional, 0))", query)
+        self.assertIn("AVG(COALESCE(det.Potencial, 0))", query)
+        self.assertIn("brilla_comercial_consolidado_dimensiones", query)
 
 
 if __name__ == "__main__":

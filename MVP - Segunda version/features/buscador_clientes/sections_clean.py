@@ -11,7 +11,7 @@ SERVICE_ICONS = {
     "SAD": "🛠️",
     "Seguros": "🛡️",
     "Brilla": "💳",
-    "EfiSoluciones": "⚙️",
+    "Efisoluciones": "⚙️",
 }
 
 

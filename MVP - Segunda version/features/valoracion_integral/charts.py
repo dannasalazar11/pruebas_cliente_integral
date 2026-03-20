@@ -292,3 +292,39 @@ def render_clasificacion_temporal_chart(df: pd.DataFrame) -> None:
     )
 
     st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})
+
+
+def render_service_classification_chart(df: pd.DataFrame) -> None:
+    if df.empty:
+        st.info("No hay datos de clasificación por servicio.")
+        return
+
+    df = df.copy()
+    df["clientes"] = df["clientes"].fillna(0)
+    df = df.sort_values("clientes", ascending=True)
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            x=df["clientes"],
+            y=df["ClasificacionRFM"],
+            orientation="h",
+            text=df["clientes"].apply(lambda value: f"{value:,.0f}".replace(",", ".")),
+            textposition="outside",
+            marker=dict(color="#0B74C8"),
+            hovertemplate="<b>%{y}</b><br>Clientes: %{x:,}<extra></extra>",
+        )
+    )
+
+    fig.update_layout(
+        height=360,
+        margin=dict(l=10, r=30, t=10, b=10),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis=dict(title="", showgrid=True, gridcolor="#E8EEF5", zeroline=False, tickfont=dict(color="#7A869A")),
+        yaxis=dict(title="", showgrid=False, automargin=True, tickfont=dict(size=13, color="#5B657A")),
+        showlegend=False,
+        bargap=0.22,
+    )
+
+    st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})

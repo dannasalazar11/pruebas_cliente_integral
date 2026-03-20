@@ -188,13 +188,13 @@ def load_cliente_raw(tipo_identificacion: str, identificacion: str) -> pd.DataFr
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def load_cliente_contratos_raw(tipo_identificacion: str, identificacion: str) -> pd.DataFrame:
-    return run_query(get_cliente_contratos_raw_query(tipo_identificacion, identificacion))
+def load_cliente_contratos_raw(tipo_identificacion: str, identificacion: str, universo: str) -> pd.DataFrame:
+    return run_query(get_cliente_contratos_raw_query(tipo_identificacion, identificacion, universo))
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def load_cliente_contratos_summary_raw(tipo_identificacion: str, identificacion: str) -> pd.DataFrame:
-    return run_query(get_cliente_contratos_summary_query(tipo_identificacion, identificacion))
+def load_cliente_contratos_summary_raw(tipo_identificacion: str, identificacion: str, universo: str) -> pd.DataFrame:
+    return run_query(get_cliente_contratos_summary_query(tipo_identificacion, identificacion, universo))
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -240,7 +240,7 @@ def search_customer(request: CustomerSearchRequest) -> CustomerSearchResult:
         )
 
     nombre, apellido = _extract_name_parts(cliente_raw)
-    contratos_raw = load_cliente_contratos_raw(request.tipo_identificacion, request.identificacion)
+    contratos_raw = load_cliente_contratos_raw(request.tipo_identificacion, request.identificacion, request.universo)
     contracts = _extract_contracts(contratos_raw)
     contratos_detalle = load_contratos_detalle(tuple(contracts), request.universo)
     dimensiones = load_cliente_dimensiones(request.tipo_identificacion, request.identificacion, request.universo)
@@ -324,11 +324,15 @@ def load_customer_service_details(
 
 
 def load_customer_contracts(request: CustomerSearchRequest) -> pd.DataFrame:
-    contratos_raw = load_cliente_contratos_raw(request.tipo_identificacion, request.identificacion)
+    contratos_raw = load_cliente_contratos_raw(request.tipo_identificacion, request.identificacion, request.universo)
     contracts = _extract_contracts(contratos_raw)
     return load_contratos_detalle(tuple(contracts), request.universo)
 
 
 def load_customer_contracts_summary(request: CustomerSearchRequest) -> tuple[int, int]:
-    contratos_summary_raw = load_cliente_contratos_summary_raw(request.tipo_identificacion, request.identificacion)
+    contratos_summary_raw = load_cliente_contratos_summary_raw(
+        request.tipo_identificacion,
+        request.identificacion,
+        request.universo,
+    )
     return _extract_contract_summary(contratos_summary_raw)
