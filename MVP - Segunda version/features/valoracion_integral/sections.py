@@ -455,6 +455,25 @@ def _prepare_consolidado_download_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _prepare_detalle_download_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
+
+    df = df.copy()
+    for column in df.columns:
+        if _normalize_column_name(str(column)) == "tipoidentificacion":
+            df[column] = df[column].apply(
+                lambda value: "".join(
+                    char
+                    for char in unicodedata.normalize("NFKD", value)
+                    if not unicodedata.combining(char)
+                )
+                if isinstance(value, str)
+                else value
+            )
+    return df
+
+
 def _format_consolidado_dataframe(df: pd.DataFrame, categoria: str) -> pd.DataFrame:
     if df.empty:
         return df
@@ -662,5 +681,5 @@ def render_consolidado_section(
                                         tipo_detalle=t,
                                         limit=None,
                                     ),
-                                    formatter=lambda df: df,
+                                    formatter=_prepare_detalle_download_dataframe,
                                 )

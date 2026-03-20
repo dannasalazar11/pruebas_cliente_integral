@@ -1,3 +1,5 @@
+import unicodedata
+
 import pandas as pd
 import streamlit as st
 
@@ -8,6 +10,32 @@ from features.decisiones_estrategicas.models import (
     PotenciarRequest,
     RecuperarRequest,
 )
+
+
+def _normalize_column_name(name: str) -> str:
+    return "".join(
+        char for char in unicodedata.normalize("NFKD", name) if not unicodedata.combining(char)
+    ).replace(" ", "").lower()
+
+
+def _prepare_download_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
+
+    df_download = df.copy()
+    for column in df_download.columns:
+        if _normalize_column_name(str(column)) == "tipoidentificacion":
+            df_download[column] = df_download[column].apply(
+                lambda value: "".join(
+                    char
+                    for char in unicodedata.normalize("NFKD", value)
+                    if not unicodedata.combining(char)
+                )
+                if isinstance(value, str)
+                else value
+            )
+
+    return df_download
 
 
 def load_styles() -> None:
@@ -295,7 +323,7 @@ def render_consolidar_results(df_resultado: pd.DataFrame, request: ConsolidarReq
     st.success(f"Se encontraron {len(df_resultado)} clientes para la estrategia de consolidación.")
     _render_result_cards(df_resultado)
 
-    csv_data = df_resultado.to_csv(index=False).encode("utf-8")
+    csv_data = _prepare_download_dataframe(df_resultado).to_csv(index=False).encode("utf-8")
     st.download_button(
         "Descargar listado (CSV)",
         data=csv_data,
@@ -417,7 +445,7 @@ def render_recuperar_results(df_resultado: pd.DataFrame, request: RecuperarReque
                 unsafe_allow_html=True,
             )
 
-    csv_data = df_resultado.to_csv(index=False).encode("utf-8")
+    csv_data = _prepare_download_dataframe(df_resultado).to_csv(index=False).encode("utf-8")
     st.download_button(
         "Descargar plan de acción (CSV)",
         data=csv_data,
@@ -555,7 +583,7 @@ def render_fidelizar_results(df_resultado: pd.DataFrame, request: FidelizarReque
                 unsafe_allow_html=True,
             )
 
-    csv_data = df_resultado.to_csv(index=False).encode("utf-8")
+    csv_data = _prepare_download_dataframe(df_resultado).to_csv(index=False).encode("utf-8")
     st.download_button(
         "Descargar listado (CSV)",
         data=csv_data,
@@ -680,7 +708,7 @@ def render_potenciar_results(df_resultado: pd.DataFrame, request: PotenciarReque
                 unsafe_allow_html=True,
             )
 
-    csv_data = df_resultado.to_csv(index=False).encode("utf-8")
+    csv_data = _prepare_download_dataframe(df_resultado).to_csv(index=False).encode("utf-8")
     st.download_button(
         "Descargar resultados (CSV)",
         data=csv_data,
