@@ -4,7 +4,7 @@ import streamlit as st
 
 
 NAVIGATION_KEY = "seccion_activa"
-PAGE_STATE_PREFIXES = ("dashboard_", "info_", "buscador_")
+PAGE_STATE_PREFIXES = ("dashboard_", "info_", "buscador_", "decisiones_")
 
 
 def clear_state_mapping(

@@ -6,6 +6,7 @@ from components.styles import load_base_css
 from core.navigation import PageDefinition, render_navigation
 from core.session import NAVIGATION_KEY, reset_app_state
 from views.buscador_clientes import render as render_buscador_clientes
+from views.decisiones_estrategicas import render as render_decisiones_estrategicas
 from views.informacion_general import render as render_informacion_general
 from views.valoracion_integral import render as render_valoracion_integral
 
@@ -38,6 +39,12 @@ def build_pages() -> list[PageDefinition]:
             nav_label="🔎 Buscador de clientes",
             title="Buscador de clientes",
             render=render_buscador_clientes,
+        ),
+        PageDefinition(
+            page_id="decisiones_estrategicas",
+            nav_label="🧭 Decisiones estratégicas",
+            title="Decisiones estratégicas",
+            render=render_decisiones_estrategicas,
         ),
     ]
 
